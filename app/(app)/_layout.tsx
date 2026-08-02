@@ -24,6 +24,7 @@ export default function AppLayout() {
       <Stack.Screen name="review" options={{ title: 'Review' }} />
       <Stack.Screen name="add" options={{ title: 'Subscription', presentation: 'modal' }} />
       <Stack.Screen name="[id]" options={{ title: 'Details' }} />
+      <Stack.Screen name="paywall" options={{ title: 'SubsTrack Pro', presentation: 'modal' }} />
     </Stack>
   );
 }

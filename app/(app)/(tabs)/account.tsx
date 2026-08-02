@@ -1,18 +1,22 @@
 import React, { useMemo } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
 import { Card } from '@/src/components/Card';
 import { FLOATING_TAB_BAR_HEIGHT } from '@/src/components/FloatingTabBar';
 import { useAuth } from '@/src/hooks/useAuth';
+import { usePurchases } from '@/src/hooks/usePurchases';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { colors, radius, spacing, typography } from '@/src/theme';
 import { formatMoney, monthlyTotal } from '@/src/utils/money';
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { user, logout } = useAuth();
+  const { isPro, managementUrl } = usePurchases();
   const { data: subscriptions } = useSubscriptions();
 
   const subs = useMemo(() => subscriptions ?? [], [subscriptions]);
@@ -64,6 +68,30 @@ export default function AccountScreen() {
           </Text>
         </View>
       </Card>
+
+      <Text style={styles.sectionLabel}>Plan</Text>
+      <Pressable
+        onPress={() => (isPro && managementUrl ? Linking.openURL(managementUrl) : router.push('/paywall'))}
+      >
+        <Card style={[styles.planCard, isPro && styles.planCardPro]}>
+          <View style={[styles.planIcon, isPro && styles.planIconPro]}>
+            <Ionicons
+              name={isPro ? 'checkmark-circle' : 'sparkles'}
+              size={20}
+              color={isPro ? colors.success : colors.accent}
+            />
+          </View>
+          <View style={styles.planText}>
+            <Text style={styles.planTitle}>{isPro ? 'SubsTrack Pro' : 'Upgrade to Pro'}</Text>
+            <Text style={styles.planSubtitle}>
+              {isPro
+                ? 'Active — tap to manage or cancel'
+                : 'Renewal reminders, price alerts and unlimited uploads'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+        </Card>
+      </Pressable>
 
       <Text style={styles.sectionLabel}>Spending</Text>
       <Card style={styles.statsCard}>
@@ -159,6 +187,37 @@ const styles = StyleSheet.create({
   sectionLabel: {
     ...typography.label,
     marginBottom: spacing.sm,
+  },
+  planCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  planCardPro: {
+    borderWidth: 1,
+    borderColor: colors.success,
+  },
+  planIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planIconPro: {
+    backgroundColor: colors.background,
+  },
+  planText: {
+    flex: 1,
+  },
+  planTitle: {
+    ...typography.subheading,
+    marginBottom: 2,
+  },
+  planSubtitle: {
+    ...typography.bodyMuted,
   },
   statsCard: {
     marginBottom: spacing.lg,

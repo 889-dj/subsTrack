@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
@@ -25,6 +25,8 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const focused = state.index === index;
+          // The bar is icon-only, so the title lives on in the accessibility
+          // label — it is the only name a screen reader can announce.
           const label =
             typeof options.tabBarLabel === 'string'
               ? options.tabBarLabel
@@ -57,12 +59,9 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
             >
               <Ionicons
                 name={focused ? icon.active : icon.inactive}
-                size={22}
+                size={24}
                 color={focused ? colors.accent : colors.textMuted}
               />
-              <Text style={[styles.label, focused && styles.labelActive]} numberOfLines={1}>
-                {label}
-              </Text>
             </Pressable>
           );
         })}
@@ -95,11 +94,10 @@ const styles = StyleSheet.create({
   },
   item: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
+    // 24px icon + 12px either side keeps the bar at FLOATING_TAB_BAR_HEIGHT.
+    paddingVertical: 12,
     borderRadius: radius.pill,
   },
   itemActive: {
@@ -107,13 +105,5 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  labelActive: {
-    color: colors.accent,
   },
 });

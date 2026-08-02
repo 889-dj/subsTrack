@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { setupMockApi } from '@/src/api/mock';
 import { AuthProvider } from '@/src/hooks/useAuth';
+import { PurchasesProvider } from '@/src/hooks/usePurchases';
 
 setupMockApi();
 
@@ -20,8 +21,10 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <StatusBar style="dark" />
-          <Slot />
+          <PurchasesProvider>
+            <StatusBar style="dark" />
+            <Slot />
+          </PurchasesProvider>
         </AuthProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
