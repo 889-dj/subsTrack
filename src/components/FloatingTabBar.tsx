@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
@@ -45,28 +45,65 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           }
 
           return (
-            <Pressable
+            <TabItem
               key={route.key}
-              onPress={onPress}
-              accessibilityRole="button"
-              accessibilityState={focused ? { selected: true } : {}}
+              icon={icon}
+              focused={focused}
               accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
-              style={({ pressed }) => [
-                styles.item,
-                focused && styles.itemActive,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Ionicons
-                name={focused ? icon.active : icon.inactive}
-                size={24}
-                color={focused ? colors.accent : colors.textMuted}
-              />
-            </Pressable>
+              onPress={onPress}
+            />
           );
         })}
       </View>
     </View>
+  );
+}
+
+/**
+ * Both icons are stacked and cross-faded rather than swapped, so the outline
+ * turning solid reads as one movement. Opacity and transform are the only
+ * properties animated here — they can all run on the native driver.
+ */
+function TabItem({
+  icon,
+  focused,
+  accessibilityLabel,
+  onPress,
+}: {
+  icon: { active: IconName; inactive: IconName };
+  focused: boolean;
+  accessibilityLabel: string;
+  onPress: () => void;
+}) {
+  const progress = useRef(new Animated.Value(focused ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: focused ? 1 : 0,
+      duration: 220,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [focused, progress]);
+
+  const scale = progress.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={focused ? { selected: true } : {}}
+      accessibilityLabel={accessibilityLabel}
+      style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+    >
+      <Animated.View style={[styles.pill, { opacity: progress }]} />
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Ionicons name={icon.inactive} size={24} color={colors.textMuted} />
+        <Animated.View style={[styles.iconOverlay, { opacity: progress }]}>
+          <Ionicons name={icon.active} size={24} color={colors.accent} />
+        </Animated.View>
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -100,8 +137,23 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: radius.pill,
   },
-  itemActive: {
+  pill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: colors.accentMuted,
+    borderRadius: radius.pill,
+  },
+  iconOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pressed: {
     opacity: 0.7,
