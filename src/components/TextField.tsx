@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
-import { color, font, radius, space, tabular, text as t } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
+import { font, radius, space, tabular, type Palette, type TextStyles } from '@/src/theme';
 
 interface TextFieldProps extends TextInputProps {
   label: string;
@@ -10,12 +11,15 @@ interface TextFieldProps extends TextInputProps {
 }
 
 export function TextField({ label, error, numeric = false, style, ...inputProps }: TextFieldProps) {
+  const { colors, text: t } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
+
   return (
     <View style={styles.container}>
       <Text style={t.label}>{label}</Text>
       <TextInput
         style={[styles.input, numeric && styles.numeric, error && styles.inputError, style]}
-        placeholderTextColor={color.muted}
+        placeholderTextColor={colors.muted}
         {...inputProps}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -23,31 +27,32 @@ export function TextField({ label, error, numeric = false, style, ...inputProps 
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: space.lg,
-    gap: space.sm,
-  },
-  input: {
-    height: 52,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.hairline,
-    backgroundColor: color.surface,
-    paddingHorizontal: space.lg,
-    fontFamily: font.sans,
-    fontSize: 15,
-    color: color.ink,
-  },
-  numeric: {
-    fontFamily: font.mono,
-    ...tabular,
-  },
-  inputError: {
-    borderColor: color.debit,
-  },
-  error: {
-    ...t.caption,
-    color: color.debit,
-  },
-});
+const createStyles = (colors: Palette, t: TextStyles) =>
+  StyleSheet.create({
+    container: {
+      marginBottom: space.lg,
+      gap: space.sm,
+    },
+    input: {
+      height: 52,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      backgroundColor: colors.surface,
+      paddingHorizontal: space.lg,
+      fontFamily: font.sans,
+      fontSize: 15,
+      color: colors.ink,
+    },
+    numeric: {
+      fontFamily: font.mono,
+      ...tabular,
+    },
+    inputError: {
+      borderColor: colors.debit,
+    },
+    error: {
+      ...t.caption,
+      color: colors.debit,
+    },
+  });

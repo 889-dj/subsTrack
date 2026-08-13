@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,7 +14,8 @@ import { useRouter } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { TextField } from '@/src/components/TextField';
 import { useAuth } from '@/src/hooks/useAuth';
-import { color, font, gutter, space, text as t } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
+import { font, gutter, space, type Palette, type TextStyles } from '@/src/theme';
 
 type Mode = 'login' | 'register';
 
@@ -26,6 +27,8 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const { login, register } = useAuth();
   const router = useRouter();
+  const { colors, text: t } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
 
   const isRegister = mode === 'register';
 
@@ -110,50 +113,51 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-    backgroundColor: color.paper,
-  },
-  content: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: gutter,
-    paddingVertical: space.xxl,
-  },
-  wordmark: {
-    fontFamily: font.monoMed,
-    fontSize: 11,
-    letterSpacing: 2,
-    color: color.indigo,
-    marginBottom: space.lg,
-  },
-  title: {
-    ...t.title,
-    marginBottom: space.xs,
-  },
-  subtitle: {
-    ...t.body,
-    color: color.muted,
-    marginBottom: space.xl,
-  },
-  form: {
-    marginBottom: space.lg,
-    gap: 0,
-  },
-  error: {
-    ...t.caption,
-    color: color.debit,
-    marginBottom: space.md,
-  },
-  toggle: {
-    alignItems: 'center',
-  },
-  toggleText: {
-    ...t.caption,
-  },
-  toggleLink: {
-    color: color.indigo,
-    fontFamily: font.sansMed,
-  },
-});
+const createStyles = (colors: Palette, t: TextStyles) =>
+  StyleSheet.create({
+    flex: {
+      flex: 1,
+      backgroundColor: colors.paper,
+    },
+    content: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      paddingHorizontal: gutter,
+      paddingVertical: space.xxl,
+    },
+    wordmark: {
+      fontFamily: font.monoMed,
+      fontSize: 11,
+      letterSpacing: 2,
+      color: colors.indigo,
+      marginBottom: space.lg,
+    },
+    title: {
+      ...t.title,
+      marginBottom: space.xs,
+    },
+    subtitle: {
+      ...t.body,
+      color: colors.muted,
+      marginBottom: space.xl,
+    },
+    form: {
+      marginBottom: space.lg,
+      gap: 0,
+    },
+    error: {
+      ...t.caption,
+      color: colors.debit,
+      marginBottom: space.md,
+    },
+    toggle: {
+      alignItems: 'center',
+    },
+    toggleText: {
+      ...t.caption,
+    },
+    toggleLink: {
+      color: colors.indigo,
+      fontFamily: font.sansMed,
+    },
+  });

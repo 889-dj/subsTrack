@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { color, font, radius, space } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
+import { font, radius, space, type Palette } from '@/src/theme';
 
 /** Height of the floating pill itself, so screens can clear it. */
 export const TAB_BAR_HEIGHT = 64;
@@ -31,6 +32,8 @@ const LABELS: Record<string, string> = {
 export function StatementTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const routes = state.routes;
   const mid = Math.ceil(routes.length / 2);
@@ -66,7 +69,7 @@ export function StatementTabBar({ state, descriptors, navigation }: BottomTabBar
         <Ionicons
           name={ICONS[route.name] ?? 'ellipse-outline'}
           size={20}
-          color={focused ? color.indigo : color.muted}
+          color={focused ? colors.indigo : colors.muted}
         />
         <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
       </Pressable>
@@ -84,7 +87,7 @@ export function StatementTabBar({ state, descriptors, navigation }: BottomTabBar
           onPress={() => router.push('/add')}
           style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
         >
-          <Ionicons name="add" size={24} color={color.white} />
+          <Ionicons name="add" size={24} color={colors.white} />
         </Pressable>
 
         {right.map(renderTab)}
@@ -93,49 +96,50 @@ export function StatementTabBar({ state, descriptors, navigation }: BottomTabBar
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    position: 'absolute',
-    left: space.xl,
-    right: space.xl,
-  },
-  bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: TAB_BAR_HEIGHT,
-    borderRadius: radius.chip,
-    backgroundColor: color.paper,
-    borderWidth: 1,
-    borderColor: color.hairline,
-    paddingHorizontal: space.sm,
-  },
-  item: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  label: {
-    fontFamily: font.mono,
-    fontSize: 10,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    color: color.muted,
-  },
-  labelActive: {
-    fontFamily: font.monoMed,
-    color: color.indigo,
-  },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: color.indigo,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: space.sm,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-});
+const createStyles = (colors: Palette) =>
+  StyleSheet.create({
+    wrapper: {
+      position: 'absolute',
+      left: space.xl,
+      right: space.xl,
+    },
+    bar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      height: TAB_BAR_HEIGHT,
+      borderRadius: radius.chip,
+      backgroundColor: colors.paper,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      paddingHorizontal: space.sm,
+    },
+    item: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+    },
+    label: {
+      fontFamily: font.mono,
+      fontSize: 10,
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
+      color: colors.muted,
+    },
+    labelActive: {
+      fontFamily: font.monoMed,
+      color: colors.indigo,
+    },
+    addButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.indigo,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginHorizontal: space.sm,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+  });

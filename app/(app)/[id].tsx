@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AmountText } from '@/src/components/AmountText';
@@ -12,7 +12,8 @@ import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { SectionHeader } from '@/src/components/SectionHeader';
 import { SkeletonList } from '@/src/components/SkeletonRow';
 import { useDeleteSubscription, useSubscription } from '@/src/hooks/useSubscriptions';
-import { color, gutter, space, text as t } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
+import { gutter, space, type Palette, type TextStyles } from '@/src/theme';
 import { monthlyCost } from '@/src/utils/money';
 
 function formatDate(iso: string): string {
@@ -30,6 +31,8 @@ export default function DetailScreen() {
   const router = useRouter();
   const { data: subscription, isLoading, isError } = useSubscription(id);
   const deleteMutation = useDeleteSubscription();
+  const { colors, text: t } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
 
   if (isLoading) {
     return (
@@ -147,48 +150,49 @@ export default function DetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: gutter,
-    paddingBottom: space.huge,
-  },
-  error: {
-    ...t.body,
-    color: color.debit,
-  },
-  identity: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-  },
-  identityText: {
-    flex: 1,
-    gap: space.sm,
-  },
-  chips: {
-    flexDirection: 'row',
-    gap: space.sm,
-    flexWrap: 'wrap',
-  },
-  hero: {
-    marginTop: space.xl,
-    paddingTop: space.lg,
-    borderTopWidth: 1,
-    borderTopColor: color.hairline,
-  },
-  heroNumber: {
-    marginTop: space.sm,
-  },
-  actions: {
-    marginTop: space.xxl,
-    gap: space.md,
-  },
-  cancelButton: {
-    marginTop: 0,
-  },
-  honesty: {
-    ...t.caption,
-    textAlign: 'center',
-    marginTop: space.xs,
-  },
-});
+const createStyles = (colors: Palette, t: TextStyles) =>
+  StyleSheet.create({
+    content: {
+      paddingHorizontal: gutter,
+      paddingBottom: space.huge,
+    },
+    error: {
+      ...t.body,
+      color: colors.debit,
+    },
+    identity: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+    },
+    identityText: {
+      flex: 1,
+      gap: space.sm,
+    },
+    chips: {
+      flexDirection: 'row',
+      gap: space.sm,
+      flexWrap: 'wrap',
+    },
+    hero: {
+      marginTop: space.xl,
+      paddingTop: space.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.hairline,
+    },
+    heroNumber: {
+      marginTop: space.sm,
+    },
+    actions: {
+      marginTop: space.xxl,
+      gap: space.md,
+    },
+    cancelButton: {
+      marginTop: 0,
+    },
+    honesty: {
+      ...t.caption,
+      textAlign: 'center',
+      marginTop: space.xs,
+    },
+  });

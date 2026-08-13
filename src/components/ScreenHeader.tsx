@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { color, space, text as t } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
+import { space, type Palette, type TextStyles } from '@/src/theme';
 
 interface ScreenHeaderProps {
   title?: string;
@@ -22,6 +23,8 @@ export function ScreenHeader({
   right,
 }: ScreenHeaderProps) {
   const router = useRouter();
+  const { colors, text: t } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const goBack = onDismiss ?? (() => (router.canGoBack() ? router.back() : router.replace('/')));
 
   return (
@@ -38,7 +41,7 @@ export function ScreenHeader({
             <Ionicons
               name={dismiss === 'close' ? 'close' : 'arrow-back'}
               size={22}
-              color={color.ink}
+              color={colors.ink}
             />
           </Pressable>
         ) : null}
@@ -59,28 +62,29 @@ export function ScreenHeader({
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    paddingTop: space.md,
-    paddingBottom: space.lg,
-  },
-  top: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-  },
-  title: {
-    ...t.title,
-    flex: 1,
-  },
-  spacer: {
-    flex: 1,
-  },
-  caption: {
-    ...t.caption,
-    marginTop: space.xs,
-  },
-  pressed: {
-    opacity: 0.5,
-  },
-});
+const createStyles = (colors: Palette, t: TextStyles) =>
+  StyleSheet.create({
+    wrap: {
+      paddingTop: space.md,
+      paddingBottom: space.lg,
+    },
+    top: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+    },
+    title: {
+      ...t.title,
+      flex: 1,
+    },
+    spacer: {
+      flex: 1,
+    },
+    caption: {
+      ...t.caption,
+      marginTop: space.xs,
+    },
+    pressed: {
+      opacity: 0.5,
+    },
+  });

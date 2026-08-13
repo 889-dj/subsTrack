@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { usePurchases } from '@/src/hooks/usePurchases';
+import { useTheme } from '@/src/hooks/useTheme';
 import type { Plan } from '@/src/lib/purchases';
-import { color, font, gutter, radius, space, text as t } from '@/src/theme';
+import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
 
 const PRO_FEATURES = [
   'Unlimited mandates tracked',
@@ -22,6 +23,8 @@ export default function PaywallScreen() {
   const router = useRouter();
   const { status, isPro, plans, isLoadingPlans, plansError, reloadPlans, purchase, restore, managementUrl } =
     usePurchases();
+  const { colors, text: t } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
 
   const [selected, setSelected] = useState<Plan['period']>('annual');
   const [busy, setBusy] = useState<'purchase' | 'restore' | null>(null);
@@ -132,7 +135,7 @@ export default function PaywallScreen() {
 
       {isLoadingPlans && plans.length === 0 ? (
         <View style={styles.plansLoading}>
-          <ActivityIndicator color={color.indigo} />
+          <ActivityIndicator color={colors.indigo} />
         </View>
       ) : null}
 
@@ -190,6 +193,8 @@ export default function PaywallScreen() {
 }
 
 function PlanCard({ plan, selected, onSelect }: { plan: Plan; selected: boolean; onSelect: () => void }) {
+  const { colors, text: t } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const isAnnual = plan.period === 'annual';
 
   return (
@@ -234,9 +239,12 @@ function Notice({
   action?: { label: string; onPress: () => void };
 }) {
   const router = useRouter();
+  const { colors, text: t } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
+
   return (
     <View style={styles.notice}>
-      <Ionicons name="information-circle-outline" size={28} color={color.indigo} />
+      <Ionicons name="information-circle-outline" size={28} color={colors.indigo} />
       <Text style={styles.noticeTitle}>{title}</Text>
       <Text style={styles.noticeBody}>{body}</Text>
       {action ? (
@@ -247,187 +255,188 @@ function Notice({
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: color.paper,
-  },
-  content: {
-    paddingHorizontal: gutter,
-    paddingBottom: space.xxl,
-  },
-  priceBlock: {
-    alignItems: 'flex-start',
-    marginTop: space.xl,
-    marginBottom: space.xl,
-  },
-  heroPrice: {
-    fontFamily: font.monoMed,
-    fontSize: 56,
-    lineHeight: 60,
-    letterSpacing: -1.5,
-    color: color.ink,
-    marginBottom: space.xs,
-  },
-  lede: {
-    ...t.body,
-    color: color.muted,
-    marginTop: space.md,
-    marginBottom: space.xl,
-  },
-  features: {
-    gap: space.md,
-    marginBottom: space.xl,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-  },
-  featureMark: {
-    fontFamily: font.monoMed,
-    fontSize: 14,
-    color: color.indigo,
-    width: 16,
-  },
-  plansLoading: {
-    paddingVertical: space.xl,
-  },
-  planCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    backgroundColor: color.surface,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.hairline,
-    padding: space.lg,
-    marginBottom: space.sm,
-  },
-  planCardSelected: {
-    borderColor: color.indigo,
-    backgroundColor: color.indigoBg,
-  },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: color.hairline,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioSelected: {
-    borderColor: color.indigo,
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: color.indigo,
-  },
-  planText: {
-    flex: 1,
-  },
-  planHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    marginBottom: 2,
-  },
-  planName: {
-    ...t.body,
-    fontFamily: font.sansSemi,
-  },
-  savings: {
-    backgroundColor: color.savedBg,
-    paddingHorizontal: space.sm,
-    paddingVertical: 2,
-    borderRadius: radius.chip,
-  },
-  savingsText: {
-    fontFamily: font.monoMed,
-    fontSize: 10,
-    letterSpacing: 0.5,
-    color: color.saved,
-  },
-  planPrice: {
-    ...t.amount,
-  },
-  cta: {
-    marginTop: space.md,
-  },
-  restore: {
-    fontFamily: font.monoMed,
-    fontSize: 11,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: color.indigo,
-    textAlign: 'center',
-    paddingVertical: space.md,
-  },
-  message: {
-    ...t.caption,
-    color: color.debit,
-    marginTop: space.sm,
-  },
-  errorBox: {
-    borderWidth: 1,
-    borderColor: color.hairline,
-    borderRadius: radius.card,
-    padding: space.md,
-    gap: space.sm,
-    marginBottom: space.md,
-  },
-  errorText: {
-    ...t.caption,
-    color: color.debit,
-  },
-  link: {
-    fontFamily: font.monoMed,
-    fontSize: 11,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: color.debit,
-  },
-  fineprint: {
-    ...t.caption,
-    textAlign: 'center',
-    marginTop: space.md,
-  },
-  legalRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: space.sm,
-    marginTop: space.sm,
-  },
-  legalLink: {
-    ...t.caption,
-    color: color.indigo,
-  },
-  legalDot: {
-    ...t.caption,
-  },
-  notice: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: gutter,
-    gap: space.sm,
-  },
-  noticeTitle: {
-    ...t.title,
-    textAlign: 'center',
-    marginTop: space.sm,
-  },
-  noticeBody: {
-    ...t.body,
-    color: color.muted,
-    textAlign: 'center',
-    marginBottom: space.sm,
-  },
-  noticeButton: {
-    alignSelf: 'stretch',
-  },
-});
+const createStyles = (colors: Palette, t: TextStyles) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.paper,
+    },
+    content: {
+      paddingHorizontal: gutter,
+      paddingBottom: space.xxl,
+    },
+    priceBlock: {
+      alignItems: 'flex-start',
+      marginTop: space.xl,
+      marginBottom: space.xl,
+    },
+    heroPrice: {
+      fontFamily: font.monoMed,
+      fontSize: 56,
+      lineHeight: 60,
+      letterSpacing: -1.5,
+      color: colors.ink,
+      marginBottom: space.xs,
+    },
+    lede: {
+      ...t.body,
+      color: colors.muted,
+      marginTop: space.md,
+      marginBottom: space.xl,
+    },
+    features: {
+      gap: space.md,
+      marginBottom: space.xl,
+    },
+    featureRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+    },
+    featureMark: {
+      fontFamily: font.monoMed,
+      fontSize: 14,
+      color: colors.indigo,
+      width: 16,
+    },
+    plansLoading: {
+      paddingVertical: space.xl,
+    },
+    planCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+      backgroundColor: colors.surface,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      padding: space.lg,
+      marginBottom: space.sm,
+    },
+    planCardSelected: {
+      borderColor: colors.indigo,
+      backgroundColor: colors.indigoBg,
+    },
+    radio: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    radioSelected: {
+      borderColor: colors.indigo,
+    },
+    radioDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.indigo,
+    },
+    planText: {
+      flex: 1,
+    },
+    planHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      marginBottom: 2,
+    },
+    planName: {
+      ...t.body,
+      fontFamily: font.sansSemi,
+    },
+    savings: {
+      backgroundColor: colors.savedBg,
+      paddingHorizontal: space.sm,
+      paddingVertical: 2,
+      borderRadius: radius.chip,
+    },
+    savingsText: {
+      fontFamily: font.monoMed,
+      fontSize: 10,
+      letterSpacing: 0.5,
+      color: colors.saved,
+    },
+    planPrice: {
+      ...t.amount,
+    },
+    cta: {
+      marginTop: space.md,
+    },
+    restore: {
+      fontFamily: font.monoMed,
+      fontSize: 11,
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      color: colors.indigo,
+      textAlign: 'center',
+      paddingVertical: space.md,
+    },
+    message: {
+      ...t.caption,
+      color: colors.debit,
+      marginTop: space.sm,
+    },
+    errorBox: {
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      borderRadius: radius.card,
+      padding: space.md,
+      gap: space.sm,
+      marginBottom: space.md,
+    },
+    errorText: {
+      ...t.caption,
+      color: colors.debit,
+    },
+    link: {
+      fontFamily: font.monoMed,
+      fontSize: 11,
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      color: colors.debit,
+    },
+    fineprint: {
+      ...t.caption,
+      textAlign: 'center',
+      marginTop: space.md,
+    },
+    legalRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: space.sm,
+      marginTop: space.sm,
+    },
+    legalLink: {
+      ...t.caption,
+      color: colors.indigo,
+    },
+    legalDot: {
+      ...t.caption,
+    },
+    notice: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: gutter,
+      gap: space.sm,
+    },
+    noticeTitle: {
+      ...t.title,
+      textAlign: 'center',
+      marginTop: space.sm,
+    },
+    noticeBody: {
+      ...t.body,
+      color: colors.muted,
+      textAlign: 'center',
+      marginBottom: space.sm,
+    },
+    noticeButton: {
+      alignSelf: 'stretch',
+    },
+  });

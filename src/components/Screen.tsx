@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
 import { Edge, SafeAreaView } from 'react-native-safe-area-context';
-import { color, gutter } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
+import { gutter, type Palette } from '@/src/theme';
 
 interface ScreenProps {
   children: React.ReactNode;
@@ -23,6 +24,8 @@ export function Screen({
   style,
   contentContainerStyle,
 }: ScreenProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const inner: ViewStyle | undefined = padded ? styles.padded : undefined;
 
   return (
@@ -43,18 +46,19 @@ export function Screen({
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: color.paper,
-  },
-  flex: {
-    flex: 1,
-  },
-  padded: {
-    paddingHorizontal: gutter,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-});
+const createStyles = (colors: Palette) =>
+  StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: colors.paper,
+    },
+    flex: {
+      flex: 1,
+    },
+    padded: {
+      paddingHorizontal: gutter,
+    },
+    scrollContent: {
+      flexGrow: 1,
+    },
+  });

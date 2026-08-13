@@ -9,8 +9,9 @@ import { SectionHeader } from '@/src/components/SectionHeader';
 import { SkeletonList } from '@/src/components/SkeletonRow';
 import { StatementRow } from '@/src/components/StatementRow';
 import { TAB_BAR_CLEARANCE } from '@/src/components/StatementTabBar';
+import { useTheme } from '@/src/hooks/useTheme';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
-import { color, font, gutter, radius, space, text as t } from '@/src/theme';
+import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
 import { monthlyCost, monthlyTotal } from '@/src/utils/money';
 import type { Subscription } from '@/src/types';
 
@@ -39,6 +40,8 @@ function dateLabel(iso: string): string {
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors, text: t } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const { data, isLoading, isError, refetch, isRefetching } = useSubscriptions();
 
   const subs = useMemo(() => data ?? [], [data]);
@@ -72,7 +75,7 @@ export default function HomeScreen() {
       ]}
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={color.indigo} />
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.indigo} />
       }
     >
       <Text style={styles.wordmark}>SUBSTRACK</Text>
@@ -179,70 +182,71 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: color.paper,
-  },
-  content: {
-    paddingHorizontal: gutter,
-    flexGrow: 1,
-  },
-  wordmark: {
-    fontFamily: font.monoMed,
-    fontSize: 11,
-    letterSpacing: 2,
-    color: color.indigo,
-    marginBottom: space.lg,
-  },
-  headerCard: {
-    backgroundColor: color.surface,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.hairline,
-    padding: space.lg,
-  },
-  total: {
-    marginTop: space.sm,
-  },
-  subline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: space.sm,
-  },
-  sublineText: {
-    ...t.caption,
-  },
-  error: {
-    ...t.caption,
-    color: color.debit,
-    marginTop: space.md,
-  },
-  bars: {
-    marginTop: space.md,
-    gap: space.md,
-  },
-  barRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-  },
-  barLabel: {
-    ...t.caption,
-    color: color.ink,
-    flex: 1,
-  },
-  barTrack: {
-    width: 64,
-    height: 8,
-    backgroundColor: color.indigoBg,
-  },
-  barFill: {
-    height: '100%',
-    backgroundColor: color.indigo,
-  },
-  quiet: {
-    paddingVertical: space.lg,
-    gap: space.xs,
-  },
-});
+const createStyles = (colors: Palette, t: TextStyles) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.paper,
+    },
+    content: {
+      paddingHorizontal: gutter,
+      flexGrow: 1,
+    },
+    wordmark: {
+      fontFamily: font.monoMed,
+      fontSize: 11,
+      letterSpacing: 2,
+      color: colors.indigo,
+      marginBottom: space.lg,
+    },
+    headerCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      padding: space.lg,
+    },
+    total: {
+      marginTop: space.sm,
+    },
+    subline: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: space.sm,
+    },
+    sublineText: {
+      ...t.caption,
+    },
+    error: {
+      ...t.caption,
+      color: colors.debit,
+      marginTop: space.md,
+    },
+    bars: {
+      marginTop: space.md,
+      gap: space.md,
+    },
+    barRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+    },
+    barLabel: {
+      ...t.caption,
+      color: colors.ink,
+      flex: 1,
+    },
+    barTrack: {
+      width: 64,
+      height: 8,
+      backgroundColor: colors.indigoBg,
+    },
+    barFill: {
+      height: '100%',
+      backgroundColor: colors.indigo,
+    },
+    quiet: {
+      paddingVertical: space.lg,
+      gap: space.xs,
+    },
+  });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, TextStyle } from 'react-native';
-import { color, text as t } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
 import { CURRENCIES } from '@/src/types';
 
 const CURRENCY_SYMBOLS: Record<string, string> = Object.fromEntries(
@@ -26,13 +26,6 @@ interface AmountTextProps {
   size?: number;
 }
 
-const TONES = {
-  ink: color.ink,
-  muted: color.muted,
-  debit: color.debit,
-  saved: color.saved,
-};
-
 /**
  * The currency symbol sits at 0.65em and one step lighter so the digits carry
  * the row. Everything is tabular so the amount column lines up down the page.
@@ -47,10 +40,18 @@ export function AmountText({
   numberOfLines,
   size = 15,
 }: AmountTextProps) {
+  const { colors, text: t } = useTheme();
+  const TONES = {
+    ink: colors.ink,
+    muted: colors.muted,
+    debit: colors.debit,
+    saved: colors.saved,
+  };
+
   const digits = round
     ? Math.round(value).toLocaleString('en-IN')
     : value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const symbol = { fontSize: Math.round(size * 0.65), color: color.muted };
+  const symbol = { fontSize: Math.round(size * 0.65), color: colors.muted };
 
   return (
     <Text

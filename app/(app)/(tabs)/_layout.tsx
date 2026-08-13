@@ -2,9 +2,12 @@ import React from 'react';
 import { Easing } from 'react-native';
 import { Tabs } from 'expo-router/js-tabs';
 import { StatementTabBar } from '@/src/components/StatementTabBar';
-import { color, font } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
+import { font } from '@/src/theme';
 
 export default function TabsLayout() {
+  const { colors } = useTheme();
+
   return (
     <Tabs
       tabBar={(props) => <StatementTabBar {...props} />}
@@ -15,11 +18,11 @@ export default function TabsLayout() {
       // attached.
       detachInactiveScreens={false}
       screenOptions={{
-        headerStyle: { backgroundColor: color.paper },
+        headerStyle: { backgroundColor: colors.paper },
         headerShadowVisible: false,
-        headerTintColor: color.ink,
-        headerTitleStyle: { color: color.ink, fontFamily: font.sansSemi },
-        sceneStyle: { backgroundColor: color.paper },
+        headerTintColor: colors.ink,
+        headerTitleStyle: { color: colors.ink, fontFamily: font.sansSemi },
+        sceneStyle: { backgroundColor: colors.paper },
         // Mount both tabs up front. Lazy mounting pushes a screen's first
         // render into the frame the transition starts on, which is the other
         // half of the stutter.

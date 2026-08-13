@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Text, TextStyle } from 'react-native';
-import { color, text as t } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
 import { currencySymbol } from '@/src/components/AmountText';
 
 interface MoneyProps {
@@ -33,6 +33,7 @@ export function Money({
   tone = 'ink',
   style,
 }: MoneyProps) {
+  const { colors, text: t } = useTheme();
   const [shown, setShown] = useState(animate ? 0 : value);
   const frame = useRef<number | null>(null);
 
@@ -72,10 +73,10 @@ export function Money({
 
   return (
     <Text
-      style={[base, tone === 'saved' && { color: color.saved }, style]}
+      style={[base, tone === 'saved' && { color: colors.saved }, style]}
       accessibilityLabel={`${currencySymbol(currency)}${Math.round(value)}`}
     >
-      <Text style={{ fontSize: symbolSize, color: color.muted }}>{currencySymbol(currency)}</Text>
+      <Text style={{ fontSize: symbolSize, color: colors.muted }}>{currencySymbol(currency)}</Text>
       {Math.round(shown).toLocaleString('en-IN')}
     </Text>
   );

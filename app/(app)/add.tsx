@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -18,12 +18,13 @@ import { Screen } from '@/src/components/Screen';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { TextField } from '@/src/components/TextField';
 import { CATEGORIES, CURRENCIES, PAYMENT_APPS } from '@/src/types';
-import { color, font, gutter, radius, space, text as t } from '@/src/theme';
+import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
 import {
   useAddSubscription,
   useSubscription,
   useUpdateSubscription,
 } from '@/src/hooks/useSubscriptions';
+import { useTheme } from '@/src/hooks/useTheme';
 import type { BillingCycle } from '@/src/types';
 
 const CYCLES: { value: BillingCycle; label: string }[] = [
@@ -57,6 +58,8 @@ export default function AddEditScreen() {
   const { data: existing, isLoading: isLoadingExisting } = useSubscription(id);
   const addMutation = useAddSubscription();
   const updateMutation = useUpdateSubscription();
+  const { colors, text: t } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
 
   const [name, setName] = useState('');
   const [cost, setCost] = useState('');
@@ -342,100 +345,101 @@ export default function AddEditScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: gutter,
-    paddingBottom: space.huge,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: space.md,
-  },
-  rowItem: {
-    flex: 1,
-  },
-  currencyItem: {
-    width: 130,
-  },
-  segmentGroup: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: color.hairline,
-    borderRadius: radius.card,
-    backgroundColor: color.surface,
-    overflow: 'hidden',
-    marginTop: space.sm,
-    marginBottom: space.lg,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: space.md + 2,
-    alignItems: 'center',
-  },
-  segmentActive: {
-    backgroundColor: color.indigoBg,
-  },
-  segmentText: {
-    ...t.body,
-    color: color.muted,
-  },
-  segmentTextActive: {
-    color: color.indigo,
-    fontFamily: font.sansMed,
-  },
-  dateButton: {
-    height: 52,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.hairline,
-    backgroundColor: color.surface,
-    justifyContent: 'center',
-    paddingHorizontal: space.lg,
-    marginTop: space.sm,
-    marginBottom: space.lg,
-  },
-  dateButtonText: {
-    ...t.amount,
-  },
-  categoryGroup: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.sm,
-    marginTop: space.sm,
-    marginBottom: space.lg,
-  },
-  categoryChip: {
-    paddingHorizontal: space.md,
-    paddingVertical: 7,
-    borderRadius: radius.chip,
-    borderWidth: 1,
-    borderColor: color.hairline,
-  },
-  categoryChipActive: {
-    backgroundColor: color.indigoBg,
-    borderColor: color.indigoBg,
-  },
-  categoryText: {
-    fontFamily: font.mono,
-    fontSize: 11,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: color.muted,
-  },
-  categoryTextActive: {
-    color: color.indigo,
-  },
-  noteInput: {
-    height: 88,
-    paddingTop: space.md,
-    textAlignVertical: 'top',
-  },
-  error: {
-    ...t.caption,
-    color: color.debit,
-    marginBottom: space.md,
-  },
-});
+const createStyles = (colors: Palette, t: TextStyles) =>
+  StyleSheet.create({
+    flex: {
+      flex: 1,
+    },
+    content: {
+      paddingHorizontal: gutter,
+      paddingBottom: space.huge,
+    },
+    row: {
+      flexDirection: 'row',
+      gap: space.md,
+    },
+    rowItem: {
+      flex: 1,
+    },
+    currencyItem: {
+      width: 130,
+    },
+    segmentGroup: {
+      flexDirection: 'row',
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      borderRadius: radius.card,
+      backgroundColor: colors.surface,
+      overflow: 'hidden',
+      marginTop: space.sm,
+      marginBottom: space.lg,
+    },
+    segment: {
+      flex: 1,
+      paddingVertical: space.md + 2,
+      alignItems: 'center',
+    },
+    segmentActive: {
+      backgroundColor: colors.indigoBg,
+    },
+    segmentText: {
+      ...t.body,
+      color: colors.muted,
+    },
+    segmentTextActive: {
+      color: colors.indigo,
+      fontFamily: font.sansMed,
+    },
+    dateButton: {
+      height: 52,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      paddingHorizontal: space.lg,
+      marginTop: space.sm,
+      marginBottom: space.lg,
+    },
+    dateButtonText: {
+      ...t.amount,
+    },
+    categoryGroup: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+      marginTop: space.sm,
+      marginBottom: space.lg,
+    },
+    categoryChip: {
+      paddingHorizontal: space.md,
+      paddingVertical: 7,
+      borderRadius: radius.chip,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+    },
+    categoryChipActive: {
+      backgroundColor: colors.indigoBg,
+      borderColor: colors.indigoBg,
+    },
+    categoryText: {
+      fontFamily: font.mono,
+      fontSize: 11,
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      color: colors.muted,
+    },
+    categoryTextActive: {
+      color: colors.indigo,
+    },
+    noteInput: {
+      height: 88,
+      paddingTop: space.md,
+      textAlignVertical: 'top',
+    },
+    error: {
+      ...t.caption,
+      color: colors.debit,
+      marginBottom: space.md,
+    },
+  });

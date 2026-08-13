@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AmountText } from '@/src/components/AmountText';
 import { Logo } from '@/src/components/Logo';
-import { color, font, space, text as t } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
+import { font, space, type Palette, type TextStyles } from '@/src/theme';
 
 export type StatementRowVariant = 'default' | 'upcoming' | 'cancelled';
 
@@ -39,6 +40,8 @@ export function StatementRow({
   last = false,
   right,
 }: StatementRowProps) {
+  const { colors, text: t } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const cancelled = variant === 'cancelled';
 
   const body = (
@@ -82,44 +85,45 @@ export function StatementRow({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    paddingVertical: space.md + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: color.hairline,
-  },
-  noRule: {
-    borderBottomWidth: 0,
-  },
-  copy: {
-    flex: 1,
-  },
-  name: {
-    fontFamily: font.monoMed,
-    fontSize: 14,
-    lineHeight: 18,
-    letterSpacing: 0.2,
-    color: color.ink,
-    textTransform: 'uppercase',
-  },
-  sublabel: {
-    ...t.caption,
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2,
-  },
-  day: {
-    ...t.label,
-    marginRight: space.xs,
-  },
-  cancelledText: {
-    color: color.muted,
-    textDecorationLine: 'line-through',
-  },
-  pressed: {
-    backgroundColor: color.indigoBg,
-  },
-});
+const createStyles = (colors: Palette, t: TextStyles) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+      paddingVertical: space.md + 2,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.hairline,
+    },
+    noRule: {
+      borderBottomWidth: 0,
+    },
+    copy: {
+      flex: 1,
+    },
+    name: {
+      fontFamily: font.monoMed,
+      fontSize: 14,
+      lineHeight: 18,
+      letterSpacing: 0.2,
+      color: colors.ink,
+      textTransform: 'uppercase',
+    },
+    sublabel: {
+      ...t.caption,
+      fontSize: 12,
+      lineHeight: 16,
+      marginTop: 2,
+    },
+    day: {
+      ...t.label,
+      marginRight: space.xs,
+    },
+    cancelledText: {
+      color: colors.muted,
+      textDecorationLine: 'line-through',
+    },
+    pressed: {
+      backgroundColor: colors.indigoBg,
+    },
+  });

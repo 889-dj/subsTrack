@@ -12,8 +12,15 @@ import { TAB_BAR_CLEARANCE } from '@/src/components/StatementTabBar';
 import { useAuth } from '@/src/hooks/useAuth';
 import { usePurchases } from '@/src/hooks/usePurchases';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
-import { color, gutter, radius, space, text as t } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
+import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
 import { monthlyTotal } from '@/src/utils/money';
+
+const APPEARANCE_OPTIONS = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
+] as const;
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
@@ -21,6 +28,8 @@ export default function AccountScreen() {
   const { user, logout } = useAuth();
   const { isPro, managementUrl } = usePurchases();
   const { data: subscriptions } = useSubscriptions();
+  const { colors, text: t, mode, setMode } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
 
   const subs = useMemo(() => subscriptions ?? [], [subscriptions]);
 
@@ -82,9 +91,27 @@ export default function AccountScreen() {
             {isPro ? 'Active — tap to manage' : 'One payment. Price alerts and exports.'}
           </Text>
         </View>
-        {isPro ? <Ionicons name="checkmark" size={16} color={color.saved} /> : null}
-        <Ionicons name="chevron-forward" size={16} color={color.muted} />
+        {isPro ? <Ionicons name="checkmark" size={16} color={colors.saved} /> : null}
+        <Ionicons name="chevron-forward" size={16} color={colors.muted} />
       </Pressable>
+
+      <SectionHeader label="Appearance" />
+      <View style={styles.segmentGroup}>
+        {APPEARANCE_OPTIONS.map((opt) => {
+          const active = mode === opt.value;
+          return (
+            <Pressable
+              key={opt.value}
+              onPress={() => setMode(opt.value)}
+              style={[styles.segment, active && styles.segmentActive]}
+            >
+              <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                {opt.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       <SectionHeader label="Spending" />
       <KeyValueRow label="Per month">
@@ -99,44 +126,70 @@ export default function AccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: color.paper,
-  },
-  content: {
-    paddingHorizontal: gutter,
-    flexGrow: 1,
-  },
-  profile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    marginTop: space.lg,
-    padding: space.lg,
-    backgroundColor: color.surface,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.hairline,
-  },
-  profileText: {
-    flex: 1,
-    gap: 2,
-  },
-  planRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    paddingVertical: space.md + 2,
-  },
-  planText: {
-    flex: 1,
-    gap: 2,
-  },
-  logout: {
-    marginTop: space.xxl,
-  },
-  pressed: {
-    opacity: 0.6,
-  },
-});
+const createStyles = (colors: Palette, t: TextStyles) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.paper,
+    },
+    content: {
+      paddingHorizontal: gutter,
+      flexGrow: 1,
+    },
+    profile: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+      marginTop: space.lg,
+      padding: space.lg,
+      backgroundColor: colors.surface,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+    },
+    profileText: {
+      flex: 1,
+      gap: 2,
+    },
+    planRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+      paddingVertical: space.md + 2,
+    },
+    planText: {
+      flex: 1,
+      gap: 2,
+    },
+    segmentGroup: {
+      flexDirection: 'row',
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      borderRadius: radius.card,
+      backgroundColor: colors.surface,
+      overflow: 'hidden',
+      marginTop: space.sm,
+    },
+    segment: {
+      flex: 1,
+      paddingVertical: space.md + 2,
+      alignItems: 'center',
+    },
+    segmentActive: {
+      backgroundColor: colors.indigoBg,
+    },
+    segmentText: {
+      ...t.body,
+      color: colors.muted,
+    },
+    segmentTextActive: {
+      color: colors.indigo,
+      fontFamily: font.sansMed,
+    },
+    logout: {
+      marginTop: space.xxl,
+    },
+    pressed: {
+      opacity: 0.6,
+    },
+  });

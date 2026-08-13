@@ -1,12 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import { color, space } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
+import { space, type Palette } from '@/src/theme';
 
 /**
  * Loading is skeleton statement rows, never a spinner — the page keeps its
  * shape and only the ink is missing.
  */
 export function SkeletonRow() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const pulse = useRef(new Animated.Value(0.5)).current;
 
   useEffect(() => {
@@ -52,31 +55,32 @@ export function SkeletonList({ count = 5 }: { count?: number }) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    paddingVertical: space.md + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: color.hairline,
-  },
-  logo: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: color.hairline,
-  },
-  copy: {
-    flex: 1,
-    gap: 6,
-  },
-  block: {
-    height: 10,
-    borderRadius: 3,
-    backgroundColor: color.hairline,
-  },
-  blockSmall: {
-    height: 8,
-  },
-});
+const createStyles = (colors: Palette) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+      paddingVertical: space.md + 2,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.hairline,
+    },
+    logo: {
+      width: 28,
+      height: 28,
+      borderRadius: 6,
+      backgroundColor: colors.hairline,
+    },
+    copy: {
+      flex: 1,
+      gap: 6,
+    },
+    block: {
+      height: 10,
+      borderRadius: 3,
+      backgroundColor: colors.hairline,
+    },
+    blockSmall: {
+      height: 8,
+    },
+  });

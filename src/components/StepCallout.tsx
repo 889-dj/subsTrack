@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { color, font, space, text as t } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
+import { font, space, type Palette, type TextStyles } from '@/src/theme';
 
 interface StepCalloutProps {
   /** 1-based. Rendered zero-padded: 01, 02, 03. */
@@ -13,6 +14,9 @@ interface StepCalloutProps {
  * sequence in another app — numbering appears nowhere else.
  */
 export function StepCallout({ step, children }: StepCalloutProps) {
+  const { colors, text: t } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
+
   return (
     <View style={styles.row}>
       <Text style={styles.number}>{String(step).padStart(2, '0')}</Text>
@@ -21,20 +25,21 @@ export function StepCallout({ step, children }: StepCalloutProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: space.md,
-    paddingVertical: space.sm,
-  },
-  number: {
-    fontFamily: font.monoMed,
-    fontSize: 13,
-    lineHeight: 22,
-    color: color.indigo,
-  },
-  copy: {
-    ...t.body,
-    flex: 1,
-  },
-});
+const createStyles = (colors: Palette, t: TextStyles) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      gap: space.md,
+      paddingVertical: space.sm,
+    },
+    number: {
+      fontFamily: font.monoMed,
+      fontSize: 13,
+      lineHeight: 22,
+      color: colors.indigo,
+    },
+    copy: {
+      ...t.body,
+      flex: 1,
+    },
+  });

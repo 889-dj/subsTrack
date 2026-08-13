@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { color, font, gutter, radius, space, text as t } from '@/src/theme';
+import { useTheme } from '@/src/hooks/useTheme';
+import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
 
 export interface PickerOption {
   value: string;
@@ -25,6 +26,8 @@ interface PickerFieldProps {
  * without a new one-off modal.
  */
 export function PickerField({ label, value, options, onChange, renderValue }: PickerFieldProps) {
+  const { colors, text: t } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
 
@@ -35,7 +38,7 @@ export function PickerField({ label, value, options, onChange, renderValue }: Pi
         <Text style={styles.fieldValue}>
           {renderValue ? renderValue(selected) : (selected?.label ?? value)}
         </Text>
-        <Ionicons name="chevron-down" size={16} color={color.muted} />
+        <Ionicons name="chevron-down" size={16} color={colors.muted} />
       </Pressable>
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
@@ -62,7 +65,7 @@ export function PickerField({ label, value, options, onChange, renderValue }: Pi
                     </Text>
                     {item.meta ? <Text style={styles.rowMeta}>{item.meta}</Text> : null}
                     {isSelected ? (
-                      <Ionicons name="checkmark" size={16} color={color.indigo} />
+                      <Ionicons name="checkmark" size={16} color={colors.indigo} />
                     ) : null}
                   </Pressable>
                 );
@@ -75,63 +78,64 @@ export function PickerField({ label, value, options, onChange, renderValue }: Pi
   );
 }
 
-const styles = StyleSheet.create({
-  field: {
-    height: 52,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.hairline,
-    backgroundColor: color.surface,
-    paddingHorizontal: space.lg,
-    marginTop: space.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  fieldValue: {
-    ...t.amount,
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(22, 24, 26, 0.35)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: color.surface,
-    borderTopLeftRadius: radius.sheet,
-    borderTopRightRadius: radius.sheet,
-    paddingHorizontal: gutter,
-    paddingTop: gutter,
-    paddingBottom: space.xxl,
-    maxHeight: '70%',
-  },
-  sheetTitle: {
-    ...t.label,
-    marginBottom: space.sm,
-  },
-  list: {
-    flexGrow: 0,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    paddingVertical: space.md + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: color.hairline,
-  },
-  rowPressed: {
-    backgroundColor: color.indigoBg,
-  },
-  rowLabel: {
-    ...t.body,
-    flex: 1,
-  },
-  rowLabelSelected: {
-    fontFamily: font.sansSemi,
-    color: color.indigo,
-  },
-  rowMeta: {
-    ...t.caption,
-  },
-});
+const createStyles = (colors: Palette, t: TextStyles) =>
+  StyleSheet.create({
+    field: {
+      height: 52,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      backgroundColor: colors.surface,
+      paddingHorizontal: space.lg,
+      marginTop: space.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    fieldValue: {
+      ...t.amount,
+    },
+    backdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    sheet: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: radius.sheet,
+      borderTopRightRadius: radius.sheet,
+      paddingHorizontal: gutter,
+      paddingTop: gutter,
+      paddingBottom: space.xxl,
+      maxHeight: '70%',
+    },
+    sheetTitle: {
+      ...t.label,
+      marginBottom: space.sm,
+    },
+    list: {
+      flexGrow: 0,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+      paddingVertical: space.md + 2,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.hairline,
+    },
+    rowPressed: {
+      backgroundColor: colors.indigoBg,
+    },
+    rowLabel: {
+      ...t.body,
+      flex: 1,
+    },
+    rowLabelSelected: {
+      fontFamily: font.sansSemi,
+      color: colors.indigo,
+    },
+    rowMeta: {
+      ...t.caption,
+    },
+  });
