@@ -1,26 +1,26 @@
 import React from 'react';
 import { Easing } from 'react-native';
 import { Tabs } from 'expo-router/js-tabs';
-import { FloatingTabBar } from '@/src/components/FloatingTabBar';
-import { colors } from '@/src/theme';
+import { StatementTabBar } from '@/src/components/StatementTabBar';
+import { color, font } from '@/src/theme';
 
 export default function TabsLayout() {
   return (
     <Tabs
-      tabBar={(props) => <FloatingTabBar {...props} />}
+      tabBar={(props) => <StatementTabBar {...props} />}
       // Defaults to true on Android, which detaches a tab's native views when it
       // blurs and re-attaches them on the way back — that work lands on the UI
       // thread on the first frames of the transition and shows up as a stutter
-      // before the slide gets going. Three light screens are cheap to keep
+      // before the slide gets going. Two light screens are cheap to keep
       // attached.
       detachInactiveScreens={false}
       screenOptions={{
-        headerStyle: { backgroundColor: colors.background },
+        headerStyle: { backgroundColor: color.paper },
         headerShadowVisible: false,
-        headerTintColor: colors.text,
-        headerTitleStyle: { color: colors.text },
-        sceneStyle: { backgroundColor: colors.background },
-        // Mount all three tabs up front. Lazy mounting pushes a screen's first
+        headerTintColor: color.ink,
+        headerTitleStyle: { color: color.ink, fontFamily: font.sansSemi },
+        sceneStyle: { backgroundColor: color.paper },
+        // Mount both tabs up front. Lazy mounting pushes a screen's first
         // render into the frame the transition starts on, which is the other
         // half of the stutter.
         lazy: false,
@@ -28,11 +28,8 @@ export default function TabsLayout() {
         // Tabs default to no animation, which reads as a hard cut.
         animation: 'shift',
         // Deliberately transform-only, no opacity. Android composites a view
-        // whose opacity is animated into an alpha layer, and `elevation`
-        // shadows inside that layer are drawn as solid grey rectangles — the
-        // cards turn into grey blocks for the length of the transition. Sliding
-        // opaque screens sidesteps it; the incoming screen is stacked on top,
-        // so it covers the outgoing one on its way in.
+        // whose opacity is animated into an alpha layer, which is worth
+        // avoiding on a screen made almost entirely of hairlines.
         sceneStyleInterpolator: ({ current }) => ({
           sceneStyle: {
             transform: [
@@ -51,9 +48,8 @@ export default function TabsLayout() {
         },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Subscriptions', headerShown: false }} />
-      <Tabs.Screen name="upload" options={{ title: 'Scan', headerShown: false }} />
-      <Tabs.Screen name="account" options={{ title: 'Account', headerShown: false }} />
+      <Tabs.Screen name="index" options={{ title: 'Home', headerShown: false }} />
+      <Tabs.Screen name="account" options={{ title: 'Settings', headerShown: false }} />
     </Tabs>
   );
 }

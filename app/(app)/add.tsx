@@ -13,8 +13,12 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button } from '@/src/components/Button';
+import { PickerField } from '@/src/components/PickerField';
+import { Screen } from '@/src/components/Screen';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { TextField } from '@/src/components/TextField';
-import { colors, radius, spacing, typography } from '@/src/theme';
+import { CATEGORIES, CURRENCIES, PAYMENT_APPS } from '@/src/types';
+import { color, font, gutter, radius, space, text as t } from '@/src/theme';
 import {
   useAddSubscription,
   useSubscription,
@@ -22,11 +26,27 @@ import {
 } from '@/src/hooks/useSubscriptions';
 import type { BillingCycle } from '@/src/types';
 
-const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP'];
 const CYCLES: { value: BillingCycle; label: string }[] = [
   { value: 'monthly', label: 'Monthly' },
   { value: 'yearly', label: 'Yearly' },
 ];
+
+const CURRENCY_OPTIONS = CURRENCIES.map((c) => ({
+  value: c.code,
+  label: c.code,
+  meta: c.name,
+}));
+
+const CURRENCY_SYMBOL_BY_CODE = Object.fromEntries(CURRENCIES.map((c) => [c.code, c.symbol]));
+
+/**
+ * "Other" on a category or payment-app chip group needs the user to say what
+ * they actually mean — this centralises the toggle + inline field so both
+ * groups behave identically.
+ */
+function isOther(value: string): boolean {
+  return value === 'Other';
+}
 
 export default function AddEditScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
@@ -44,11 +64,16 @@ export default function AddEditScreen() {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [nextRenewalDate, setNextRenewalDate] = useState(new Date());
   const [category, setCategory] = useState('');
+  const [categoryOther, setCategoryOther] = useState('');
+  const [source, setSource] = useState('');
+  const [sourceOther, setSourceOther] = useState('');
   const [note, setNote] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [costError, setCostError] = useState<string | null>(null);
+  const [categoryOtherError, setCategoryOtherError] = useState<string | null>(null);
+  const [sourceOtherError, setSourceOtherError] = useState<string | null>(null);
 
   useEffect(() => {
     if (existing) {
@@ -57,7 +82,23 @@ export default function AddEditScreen() {
       setCurrency(existing.currency);
       setBillingCycle(existing.billingCycle);
       setNextRenewalDate(new Date(existing.nextRenewalDate));
-      setCategory(existing.category ?? '');
+
+      const existingCategory = existing.category ?? '';
+      if (existingCategory && !CATEGORIES.includes(existingCategory as (typeof CATEGORIES)[number])) {
+        setCategory('Other');
+        setCategoryOther(existingCategory);
+      } else {
+        setCategory(existingCategory);
+      }
+
+      const existingSource = existing.source ?? '';
+      if (existingSource && !PAYMENT_APPS.includes(existingSource as (typeof PAYMENT_APPS)[number])) {
+        setSource('Other');
+        setSourceOther(existingSource);
+      } else {
+        setSource(existingSource);
+      }
+
       setNote(existing.note ?? '');
     }
   }, [existing]);
@@ -68,14 +109,24 @@ export default function AddEditScreen() {
     let valid = true;
     setNameError(null);
     setCostError(null);
+    setCategoryOtherError(null);
+    setSourceOtherError(null);
 
     if (!name.trim()) {
-      setNameError('Name is required.');
+      setNameError('Give it a name.');
       valid = false;
     }
     const numericCost = Number(cost);
     if (!cost.trim() || Number.isNaN(numericCost) || numericCost <= 0) {
-      setCostError('Enter a valid cost.');
+      setCostError('Enter what it charges.');
+      valid = false;
+    }
+    if (isOther(category) && !categoryOther.trim()) {
+      setCategoryOtherError('Tell us what category this is.');
+      valid = false;
+    }
+    if (isOther(source) && !sourceOther.trim()) {
+      setSourceOtherError('Tell us which app or platform.');
       valid = false;
     }
     return valid;
@@ -85,13 +136,17 @@ export default function AddEditScreen() {
     setError(null);
     if (!validate()) return;
 
+    const resolvedCategory = isOther(category) ? categoryOther.trim() : category;
+    const resolvedSource = isOther(source) ? sourceOther.trim() : source;
+
     const input = {
       name: name.trim(),
       cost: Number(cost),
       currency,
       billingCycle,
       nextRenewalDate: nextRenewalDate.toISOString(),
-      category: category.trim() || undefined,
+      category: resolvedCategory || undefined,
+      source: resolvedSource || undefined,
       note: note.trim() || undefined,
     };
 
@@ -103,216 +158,284 @@ export default function AddEditScreen() {
       }
       router.back();
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Could not save. Please try again.');
+      setError(e?.response?.data?.message ?? "Couldn't save that. Try again.");
     }
   }
 
-  if (isEdit && isLoadingExisting) {
-    return null;
-  }
+  if (isEdit && isLoadingExisting) return null;
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <TextField label="Name" value={name} onChangeText={setName} placeholder="Netflix" error={nameError ?? undefined} />
+    <Screen padded={false} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <ScreenHeader
+              title={isEdit ? 'Edit mandate' : 'Add a mandate'}
+              dismiss="close"
+              caption={isEdit ? undefined : 'What is charging you, and how much.'}
+            />
 
-          <View style={styles.row}>
-            <View style={styles.rowItem}>
-              <TextField
-                label="Cost"
-                value={cost}
-                onChangeText={setCost}
-                placeholder="499"
-                keyboardType="decimal-pad"
-                error={costError ?? undefined}
-              />
-            </View>
-            <View style={styles.rowItemSmall}>
-              <Text style={styles.label}>Currency</Text>
-              <View style={styles.pillGroup}>
-                {CURRENCIES.map((c) => (
-                  <Pressable
-                    key={c}
-                    onPress={() => setCurrency(c)}
-                    style={[styles.pill, currency === c && styles.pillActive]}
-                  >
-                    <Text style={[styles.pillText, currency === c && styles.pillTextActive]}>{c}</Text>
-                  </Pressable>
-                ))}
+            <TextField
+              label="Name"
+              value={name}
+              onChangeText={setName}
+              placeholder="Netflix"
+              autoFocus={!isEdit}
+              error={nameError ?? undefined}
+            />
+
+            <View style={styles.row}>
+              <View style={styles.rowItem}>
+                <TextField
+                  label="Amount"
+                  value={cost}
+                  onChangeText={setCost}
+                  placeholder="499"
+                  keyboardType="decimal-pad"
+                  numeric
+                  error={costError ?? undefined}
+                />
+              </View>
+              <View style={styles.currencyItem}>
+                <PickerField
+                  label="Currency"
+                  value={currency}
+                  options={CURRENCY_OPTIONS}
+                  onChange={setCurrency}
+                  renderValue={(opt) =>
+                    opt ? `${CURRENCY_SYMBOL_BY_CODE[opt.value]} ${opt.value}` : currency
+                  }
+                />
               </View>
             </View>
-          </View>
 
-          <Text style={styles.label}>Billing cycle</Text>
-          <View style={styles.segmentGroup}>
-            {CYCLES.map((cycle) => (
-              <Pressable
-                key={cycle.value}
-                onPress={() => setBillingCycle(cycle.value)}
-                style={[styles.segment, billingCycle === cycle.value && styles.segmentActive]}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    billingCycle === cycle.value && styles.segmentTextActive,
-                  ]}
+            <Text style={t.label}>Every</Text>
+            <View style={styles.segmentGroup}>
+              {CYCLES.map((cycle) => (
+                <Pressable
+                  key={cycle.value}
+                  onPress={() => setBillingCycle(cycle.value)}
+                  style={[styles.segment, billingCycle === cycle.value && styles.segmentActive]}
                 >
-                  {cycle.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+                  <Text
+                    style={[
+                      styles.segmentText,
+                      billingCycle === cycle.value && styles.segmentTextActive,
+                    ]}
+                  >
+                    {cycle.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
 
-          <Text style={styles.label}>Next renewal date</Text>
-          <Pressable style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
-            <Text style={styles.dateButtonText}>
-              {nextRenewalDate.toLocaleDateString(undefined, {
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric',
+            <Text style={t.label}>Next debit</Text>
+            <Pressable style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+              <Text style={styles.dateButtonText}>
+                {nextRenewalDate.toLocaleDateString('en-IN', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </Text>
+            </Pressable>
+            {showDatePicker && (
+              <DateTimePicker
+                value={nextRenewalDate}
+                mode="date"
+                onChange={(_event, date) => {
+                  setShowDatePicker(Platform.OS === 'ios');
+                  if (date) setNextRenewalDate(date);
+                }}
+              />
+            )}
+
+            <Text style={t.label}>Category</Text>
+            <View style={styles.categoryGroup}>
+              {CATEGORIES.map((c) => {
+                const selected = category === c;
+                return (
+                  <Pressable
+                    key={c}
+                    onPress={() => {
+                      setCategory(selected ? '' : c);
+                      if (selected) setCategoryOther('');
+                    }}
+                    style={[styles.categoryChip, selected && styles.categoryChipActive]}
+                  >
+                    <Text style={[styles.categoryText, selected && styles.categoryTextActive]}>
+                      {c}
+                    </Text>
+                  </Pressable>
+                );
               })}
-            </Text>
-          </Pressable>
-          {showDatePicker && (
-            <DateTimePicker
-              value={nextRenewalDate}
-              mode="date"
-              onChange={(_event, date) => {
-                setShowDatePicker(Platform.OS === 'ios');
-                if (date) setNextRenewalDate(date);
-              }}
+            </View>
+            {isOther(category) ? (
+              <TextField
+                label="What category is this?"
+                value={categoryOther}
+                onChangeText={setCategoryOther}
+                placeholder="Productivity"
+                autoFocus
+                error={categoryOtherError ?? undefined}
+              />
+            ) : null}
+
+            <Text style={t.label}>Paid via</Text>
+            <View style={styles.categoryGroup}>
+              {PAYMENT_APPS.map((app) => {
+                const selected = source === app;
+                return (
+                  <Pressable
+                    key={app}
+                    onPress={() => {
+                      setSource(selected ? '' : app);
+                      if (selected) setSourceOther('');
+                    }}
+                    style={[styles.categoryChip, selected && styles.categoryChipActive]}
+                  >
+                    <Text style={[styles.categoryText, selected && styles.categoryTextActive]}>
+                      {app}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {isOther(source) ? (
+              <TextField
+                label="Which app or platform?"
+                value={sourceOther}
+                onChangeText={setSourceOther}
+                placeholder="Amazon Pay"
+                autoFocus
+                error={sourceOtherError ?? undefined}
+              />
+            ) : null}
+
+            <TextField
+              label="Note (optional)"
+              value={note}
+              onChangeText={setNote}
+              placeholder="Shared with family"
+              multiline
+              style={styles.noteInput}
             />
-          )}
 
-          <TextField
-            label="Category (optional)"
-            value={category}
-            onChangeText={setCategory}
-            placeholder="Entertainment"
-          />
-          <TextField
-            label="Note (optional)"
-            value={note}
-            onChangeText={setNote}
-            placeholder="Shared with family"
-            multiline
-          />
+            {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <Button
-            label={isEdit ? 'Save changes' : 'Add subscription'}
-            onPress={handleSave}
-            loading={isSaving}
-            style={styles.saveButton}
-          />
-        </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+            <Button
+              label={isEdit ? 'Save changes' : 'Add mandate'}
+              onPress={handleSave}
+              loading={isSaving}
+            />
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingHorizontal: gutter,
+    paddingBottom: space.huge,
   },
   row: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: space.md,
   },
   rowItem: {
     flex: 1,
   },
-  rowItemSmall: {
-    marginBottom: spacing.md,
-  },
-  label: {
-    ...typography.label,
-    marginBottom: spacing.xs,
-  },
-  pillGroup: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  pill: {
-    height: 52,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pillActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  pillText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  pillTextActive: {
-    color: colors.white,
+  currencyItem: {
+    width: 130,
   },
   segmentGroup: {
     flexDirection: 'row',
-    backgroundColor: colors.accentMuted,
-    borderRadius: radius.md,
-    padding: 4,
-    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: color.hairline,
+    borderRadius: radius.card,
+    backgroundColor: color.surface,
+    overflow: 'hidden',
+    marginTop: space.sm,
+    marginBottom: space.lg,
   },
   segment: {
     flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
+    paddingVertical: space.md + 2,
     alignItems: 'center',
   },
   segmentActive: {
-    backgroundColor: colors.surface,
-    ...({
-      shadowColor: '#14171F',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 4,
-      elevation: 1,
-    } as object),
+    backgroundColor: color.indigoBg,
   },
   segmentText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textMuted,
+    ...t.body,
+    color: color.muted,
   },
   segmentTextActive: {
-    color: colors.accent,
+    color: color.indigo,
+    fontFamily: font.sansMed,
   },
   dateButton: {
     height: 52,
-    borderRadius: radius.md,
+    borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: color.hairline,
+    backgroundColor: color.surface,
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
+    paddingHorizontal: space.lg,
+    marginTop: space.sm,
+    marginBottom: space.lg,
   },
   dateButtonText: {
-    fontSize: 16,
-    color: colors.text,
+    ...t.amount,
+  },
+  categoryGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.sm,
+    marginTop: space.sm,
+    marginBottom: space.lg,
+  },
+  categoryChip: {
+    paddingHorizontal: space.md,
+    paddingVertical: 7,
+    borderRadius: radius.chip,
+    borderWidth: 1,
+    borderColor: color.hairline,
+  },
+  categoryChipActive: {
+    backgroundColor: color.indigoBg,
+    borderColor: color.indigoBg,
+  },
+  categoryText: {
+    fontFamily: font.mono,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: color.muted,
+  },
+  categoryTextActive: {
+    color: color.indigo,
+  },
+  noteInput: {
+    height: 88,
+    paddingTop: space.md,
+    textAlignVertical: 'top',
   },
   error: {
-    color: colors.danger,
-    fontSize: 14,
-    marginBottom: spacing.md,
-  },
-  saveButton: {
-    marginTop: spacing.sm,
+    ...t.caption,
+    color: color.debit,
+    marginBottom: space.md,
   },
 });

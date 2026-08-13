@@ -1,19 +1,21 @@
 import React from 'react';
 import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
-import { colors, radius, spacing, typography } from '@/src/theme';
+import { color, font, radius, space, tabular, text as t } from '@/src/theme';
 
 interface TextFieldProps extends TextInputProps {
   label: string;
   error?: string;
+  /** Amounts get mono tabular figures; prose does not. */
+  numeric?: boolean;
 }
 
-export function TextField({ label, error, style, ...inputProps }: TextFieldProps) {
+export function TextField({ label, error, numeric = false, style, ...inputProps }: TextFieldProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={t.label}>{label}</Text>
       <TextInput
-        style={[styles.input, error && styles.inputError, style]}
-        placeholderTextColor={colors.textFaint}
+        style={[styles.input, numeric && styles.numeric, error && styles.inputError, style]}
+        placeholderTextColor={color.muted}
         {...inputProps}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -23,28 +25,29 @@ export function TextField({ label, error, style, ...inputProps }: TextFieldProps
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: spacing.md,
-  },
-  label: {
-    ...typography.label,
-    marginBottom: spacing.xs,
+    marginBottom: space.lg,
+    gap: space.sm,
   },
   input: {
     height: 52,
-    borderRadius: radius.md,
+    borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    fontSize: 16,
-    color: colors.text,
+    borderColor: color.hairline,
+    backgroundColor: color.surface,
+    paddingHorizontal: space.lg,
+    fontFamily: font.sans,
+    fontSize: 15,
+    color: color.ink,
+  },
+  numeric: {
+    fontFamily: font.mono,
+    ...tabular,
   },
   inputError: {
-    borderColor: colors.danger,
+    borderColor: color.debit,
   },
   error: {
-    marginTop: spacing.xs,
-    fontSize: 12,
-    color: colors.danger,
+    ...t.caption,
+    color: color.debit,
   },
 });

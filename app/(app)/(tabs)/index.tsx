@@ -1,263 +1,248 @@
 import React, { useMemo } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Card } from '@/src/components/Card';
-import { EmptyState } from '@/src/components/EmptyState';
-import { Spinner } from '@/src/components/Spinner';
-import { SubscriptionRow } from '@/src/components/SubscriptionRow';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FLOATING_TAB_BAR_HEIGHT } from '@/src/components/FloatingTabBar';
+import { AmountText } from '@/src/components/AmountText';
+import { EmptyState } from '@/src/components/EmptyState';
+import { Money } from '@/src/components/Money';
+import { SectionHeader } from '@/src/components/SectionHeader';
+import { SkeletonList } from '@/src/components/SkeletonRow';
+import { StatementRow } from '@/src/components/StatementRow';
+import { TAB_BAR_CLEARANCE } from '@/src/components/StatementTabBar';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
-import { colors, radius, spacing, typography } from '@/src/theme';
-import { formatMoney, monthlyCost, monthlyTotal } from '@/src/utils/money';
+import { color, font, gutter, radius, space, text as t } from '@/src/theme';
+import { monthlyCost, monthlyTotal } from '@/src/utils/money';
 import type { Subscription } from '@/src/types';
 
-/** Monthly spend grouped by category, biggest first. */
+const DAY = 24 * 60 * 60 * 1000;
+
+/** Annual spend grouped by category, biggest first. */
 function spendByCategory(subs: Subscription[]): { category: string; amount: number }[] {
   const totals = new Map<string, number>();
   for (const sub of subs) {
     const key = sub.category ?? 'Uncategorised';
-    totals.set(key, (totals.get(key) ?? 0) + monthlyCost(sub));
+    totals.set(key, (totals.get(key) ?? 0) + monthlyCost(sub) * 12);
   }
   return [...totals.entries()]
     .map(([category, amount]) => ({ category, amount }))
     .sort((a, b) => b.amount - a.amount);
 }
 
-export default function DashboardScreen() {
+function dayLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-IN', { weekday: 'short' }).toUpperCase();
+}
+
+function dateLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
+export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { data: subscriptions, isLoading, isError, refetch, isRefetching } = useSubscriptions();
+  const { data, isLoading, isError, refetch, isRefetching } = useSubscriptions();
 
-  const subs = useMemo(() => subscriptions ?? [], [subscriptions]);
-  const total = useMemo(() => monthlyTotal(subs), [subs]);
+  const subs = useMemo(() => data ?? [], [data]);
+  const monthly = useMemo(() => monthlyTotal(subs), [subs]);
+  const annual = monthly * 12;
   const byCategory = useMemo(() => spendByCategory(subs), [subs]);
   const currency = subs[0]?.currency ?? 'INR';
 
-  const nextRenewal = useMemo<Subscription | null>(() => {
-    if (subs.length === 0) return null;
-    return [...subs].sort(
-      (a, b) => new Date(a.nextRenewalDate).getTime() - new Date(b.nextRenewalDate).getTime()
-    )[0];
-  }, [subs]);
+  const sorted = useMemo(
+    () =>
+      [...subs].sort(
+        (a, b) => new Date(a.nextRenewalDate).getTime() - new Date(b.nextRenewalDate).getTime()
+      ),
+    [subs]
+  );
 
-  if (isLoading) return <Spinner />;
+  const dueThisWeek = useMemo(() => {
+    const cutoff = Date.now() + 7 * DAY;
+    return sorted.filter((s) => new Date(s.nextRenewalDate).getTime() <= cutoff);
+  }, [sorted]);
 
   const isEmpty = subs.length === 0;
+  const maxCategory = byCategory[0]?.amount ?? 1;
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={subs}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.listContent,
-          {
-            paddingTop: insets.top + spacing.lg,
-            paddingBottom: FLOATING_TAB_BAR_HEIGHT + spacing.xl,
-          },
-        ]}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />
-        }
-        ListHeaderComponent={
-          <View>
-            <Text style={styles.greeting}>Your subscriptions</Text>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + space.lg, paddingBottom: TAB_BAR_CLEARANCE + space.xxl },
+      ]}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={color.indigo} />
+      }
+    >
+      <Text style={styles.wordmark}>SUBSTRACK</Text>
 
-            {!isEmpty ? (
-              <Card style={styles.totalCard}>
-                <Text style={styles.totalLabel}>Monthly total</Text>
-                <Text style={styles.totalValue}>{formatMoney(total, currency)}</Text>
-                {nextRenewal ? (
-                  <Text style={styles.nextRenewal}>
-                    Next: {nextRenewal.name} on{' '}
-                    {new Date(nextRenewal.nextRenewalDate).toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </Text>
-                ) : null}
-
-                {byCategory.length > 1 ? (
-                  <View style={styles.breakdown}>
-                    {byCategory.slice(0, 4).map((entry) => (
-                      <View key={entry.category} style={styles.breakdownRow}>
-                        <View style={styles.breakdownTrack}>
-                          <View
-                            style={[
-                              styles.breakdownBar,
-                              { width: `${Math.max(4, (entry.amount / total) * 100)}%` },
-                            ]}
-                          />
-                        </View>
-                        <Text style={styles.breakdownCategory} numberOfLines={1}>
-                          {entry.category}
-                        </Text>
-                        <Text style={styles.breakdownAmount}>
-                          {formatMoney(entry.amount, currency)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-              </Card>
-            ) : null}
-
-            <Pressable style={styles.uploadCta} onPress={() => router.push('/upload')}>
-              <View style={styles.uploadIcon}>
-                <Ionicons name="scan-outline" size={22} color={colors.white} />
-              </View>
-              <View style={styles.uploadCopy}>
-                <Text style={styles.uploadTitle}>Scan a bank statement</Text>
-                <Text style={styles.uploadSubtitle}>
-                  We'll find the recurring charges and categorise them for you
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.white} />
-            </Pressable>
-
-            {isError ? (
-              <Text style={styles.errorBanner}>Couldn't load your subscriptions. Pull to retry.</Text>
-            ) : null}
-
-            {!isEmpty ? <Text style={styles.sectionLabel}>All subscriptions</Text> : null}
+      {isLoading ? (
+        <SkeletonList count={6} />
+      ) : (
+        <>
+          <View style={styles.headerCard}>
+            <Text style={t.label}>Committed annually</Text>
+            <Money value={annual} currency={currency} size="total" animate style={styles.total} />
+            <View style={styles.subline}>
+              <AmountText value={monthly} currency={currency} tone="muted" size={13} />
+              <Text style={styles.sublineText}>
+                {' '}
+                / month · {subs.length} active
+              </Text>
+            </View>
           </View>
-        }
-        renderItem={({ item }) => (
-          <SubscriptionRow subscription={item} onPress={() => router.push(`/${item.id}`)} />
-        )}
-        ListEmptyComponent={
-          !isError ? (
+
+          {isError ? (
+            <Text style={styles.error}>
+              Couldn't load your mandates. Pull down to try again.
+            </Text>
+          ) : null}
+
+          {byCategory.length > 1 ? (
+            <>
+              <SectionHeader label="Where it goes" />
+              <View style={styles.bars}>
+                {byCategory.slice(0, 4).map((entry) => (
+                  <View key={entry.category} style={styles.barRow}>
+                    <Text style={styles.barLabel} numberOfLines={1}>
+                      {entry.category}
+                    </Text>
+                    <AmountText value={entry.amount} currency={currency} size={13} />
+                    <View style={styles.barTrack}>
+                      <View
+                        style={[
+                          styles.barFill,
+                          { width: `${Math.max(6, (entry.amount / maxCategory) * 100)}%` },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : null}
+
+          <SectionHeader label="Next 7 days" />
+          {dueThisWeek.length > 0 ? (
+            dueThisWeek.map((sub, i) => (
+              <StatementRow
+                key={sub.id}
+                name={sub.name}
+                amount={sub.cost}
+                currency={sub.currency}
+                variant="upcoming"
+                day={dayLabel(sub.nextRenewalDate)}
+                approx={sub.currency !== 'INR'}
+                last={i === dueThisWeek.length - 1}
+                onPress={() => router.push(`/${sub.id}`)}
+              />
+            ))
+          ) : (
+            <View style={styles.quiet}>
+              <Text style={t.body}>Nothing due this week.</Text>
+              {sorted[0] ? (
+                <Text style={t.caption}>
+                  Next is {sorted[0].name} on {dateLabel(sorted[0].nextRenewalDate)}.
+                </Text>
+              ) : null}
+            </View>
+          )}
+
+          <SectionHeader label={`All mandates · ${subs.length}`} />
+          {isEmpty ? (
             <EmptyState
-              title="Nothing tracked yet"
-              subtitle="Upload a statement above and we'll pull out your subscriptions automatically."
+              title="No mandates yet."
+              subtitle="Add what's charging you and we'll keep the total honest."
+              icon="reader-outline"
+              action={{ label: 'Add a mandate', onPress: () => router.push('/add') }}
             />
-          ) : null
-        }
-        ListFooterComponent={
-          <Pressable style={styles.manualLink} onPress={() => router.push('/add')} hitSlop={8}>
-            <Ionicons name="add" size={16} color={colors.accent} />
-            <Text style={styles.manualLinkText}>Add one manually</Text>
-          </Pressable>
-        }
-      />
-    </View>
+          ) : (
+            sorted.map((sub, i) => (
+              <StatementRow
+                key={sub.id}
+                name={sub.name}
+                amount={sub.cost}
+                currency={sub.currency}
+                sublabel={`${sub.billingCycle === 'yearly' ? 'Yearly' : 'Monthly'} · ${
+                  sub.category ?? 'Uncategorised'
+                }`}
+                approx={sub.currency !== 'INR'}
+                last={i === sorted.length - 1}
+                onPress={() => router.push(`/${sub.id}`)}
+              />
+            ))
+          )}
+        </>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: color.paper,
   },
-  listContent: {
-    paddingHorizontal: spacing.lg,
+  content: {
+    paddingHorizontal: gutter,
     flexGrow: 1,
   },
-  greeting: {
-    ...typography.title,
-    marginBottom: spacing.md,
+  wordmark: {
+    fontFamily: font.monoMed,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: color.indigo,
+    marginBottom: space.lg,
   },
-  totalCard: {
-    marginBottom: spacing.md,
+  headerCard: {
+    backgroundColor: color.surface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: color.hairline,
+    padding: space.lg,
   },
-  totalLabel: {
-    ...typography.label,
-    marginBottom: spacing.xs,
+  total: {
+    marginTop: space.sm,
   },
-  totalValue: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  nextRenewal: {
-    ...typography.bodyMuted,
-    marginTop: spacing.sm,
-  },
-  breakdown: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: spacing.sm,
-  },
-  breakdownRow: {
+  subline: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    marginTop: space.sm,
   },
-  breakdownTrack: {
-    width: 56,
-    height: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accentMuted,
-    overflow: 'hidden',
+  sublineText: {
+    ...t.caption,
   },
-  breakdownBar: {
+  error: {
+    ...t.caption,
+    color: color.debit,
+    marginTop: space.md,
+  },
+  bars: {
+    marginTop: space.md,
+    gap: space.md,
+  },
+  barRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+  },
+  barLabel: {
+    ...t.caption,
+    color: color.ink,
+    flex: 1,
+  },
+  barTrack: {
+    width: 64,
+    height: 8,
+    backgroundColor: color.indigoBg,
+  },
+  barFill: {
     height: '100%',
-    borderRadius: radius.pill,
-    backgroundColor: colors.accent,
+    backgroundColor: color.indigo,
   },
-  breakdownCategory: {
-    ...typography.bodyMuted,
-    flex: 1,
-  },
-  breakdownAmount: {
-    ...typography.caption,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  uploadCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.accent,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-    gap: spacing.md,
-  },
-  uploadIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  uploadCopy: {
-    flex: 1,
-  },
-  uploadTitle: {
-    ...typography.subheading,
-    color: colors.white,
-    marginBottom: 2,
-  },
-  uploadSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.85)',
-    lineHeight: 17,
-  },
-  sectionLabel: {
-    ...typography.label,
-    marginBottom: spacing.sm,
-  },
-  errorBanner: {
-    ...typography.bodyMuted,
-    color: colors.danger,
-    marginBottom: spacing.md,
-  },
-  manualLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    marginTop: spacing.sm,
-  },
-  manualLinkText: {
-    ...typography.bodyMuted,
-    color: colors.accent,
-    fontWeight: '600',
+  quiet: {
+    paddingVertical: space.lg,
+    gap: space.xs,
   },
 });

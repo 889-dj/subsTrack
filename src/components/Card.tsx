@@ -1,7 +1,11 @@
 import React from 'react';
 import { StyleSheet, View, ViewProps } from 'react-native';
-import { colors, radius, shadow, spacing } from '@/src/theme';
+import { color, radius, space } from '@/src/theme';
 
+/**
+ * Surface on paper. No shadow anywhere in this app — separation comes from
+ * the hairline and the paper-vs-surface contrast.
+ */
 export function Card({ style, children, ...rest }: ViewProps) {
   return (
     <View style={[styles.card, style]} {...rest}>
@@ -12,9 +16,10 @@ export function Card({ style, children, ...rest }: ViewProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    ...shadow.card,
+    backgroundColor: color.surface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: color.hairline,
+    padding: space.lg,
   },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '@/src/theme';
+import { color, font, radius, space } from '@/src/theme';
 
 interface CategoryChipProps {
   label: string;
@@ -9,6 +9,7 @@ interface CategoryChipProps {
   onPress?: () => void;
 }
 
+/** Mono label on an indigo tint. No border when selected — the fill is the state. */
 export function CategoryChip({ label, selected = false, onPress }: CategoryChipProps) {
   const body = <Text style={[styles.text, selected && styles.textSelected]}>{label}</Text>;
 
@@ -32,27 +33,30 @@ export function CategoryChip({ label, selected = false, onPress }: CategoryChipP
 
 const styles = StyleSheet.create({
   chip: {
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
+    paddingHorizontal: space.md,
+    paddingVertical: 7,
+    borderRadius: radius.chip,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: color.hairline,
+    backgroundColor: 'transparent',
     alignSelf: 'flex-start',
   },
   chipSelected: {
-    backgroundColor: colors.accentMuted,
-    borderColor: colors.accent,
+    backgroundColor: color.indigoBg,
+    borderColor: color.indigoBg,
   },
   text: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textMuted,
+    fontFamily: font.mono,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: color.muted,
   },
   textSelected: {
-    color: colors.accent,
+    color: color.indigo,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
 });

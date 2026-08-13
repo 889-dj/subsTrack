@@ -3,14 +3,17 @@ import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'r
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { AmountText } from '@/src/components/AmountText';
 import { Button } from '@/src/components/Button';
-import { Card } from '@/src/components/Card';
-import { FLOATING_TAB_BAR_HEIGHT } from '@/src/components/FloatingTabBar';
+import { KeyValueRow } from '@/src/components/KeyValueRow';
+import { Logo } from '@/src/components/Logo';
+import { SectionHeader } from '@/src/components/SectionHeader';
+import { TAB_BAR_CLEARANCE } from '@/src/components/StatementTabBar';
 import { useAuth } from '@/src/hooks/useAuth';
 import { usePurchases } from '@/src/hooks/usePurchases';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
-import { colors, radius, spacing, typography } from '@/src/theme';
-import { formatMoney, monthlyTotal } from '@/src/utils/money';
+import { color, gutter, radius, space, text as t } from '@/src/theme';
+import { monthlyTotal } from '@/src/utils/money';
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
@@ -22,13 +25,11 @@ export default function AccountScreen() {
   const subs = useMemo(() => subscriptions ?? [], [subscriptions]);
 
   const stats = useMemo(() => {
-    const imported = subs.filter((s) => s.source === 'statement').length;
+    const monthly = monthlyTotal(subs);
     return {
       total: subs.length,
-      imported,
-      manual: subs.length - imported,
-      monthly: monthlyTotal(subs),
-      yearly: monthlyTotal(subs) * 12,
+      monthly,
+      yearly: monthly * 12,
     };
   }, [subs]);
 
@@ -37,10 +38,9 @@ export default function AccountScreen() {
   // A session restored from a stored token has no profile until the API returns
   // one, so the email can legitimately be empty here.
   const email = user?.email?.trim();
-  const initial = (email?.[0] ?? '?').toUpperCase();
 
   function handleLogout() {
-    Alert.alert('Log out?', "You'll need to sign in again to see your subscriptions.", [
+    Alert.alert('Log out?', "You'll need to sign in again to see your mandates.", [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Log out', style: 'destructive', onPress: () => logout() },
     ]);
@@ -48,204 +48,95 @@ export default function AccountScreen() {
 
   return (
     <ScrollView
+      style={styles.screen}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: insets.top + spacing.lg, paddingBottom: FLOATING_TAB_BAR_HEIGHT + spacing.xl },
+        { paddingTop: insets.top + space.lg, paddingBottom: TAB_BAR_CLEARANCE + space.xxl },
       ]}
+      showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.title}>Account</Text>
+      <Text style={t.title}>Settings</Text>
 
-      <Card style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
-        </View>
+      <View style={styles.profile}>
+        <Logo name={email || '?'} size={44} />
         <View style={styles.profileText}>
-          <Text style={styles.email} numberOfLines={1}>
+          <Text style={t.body} numberOfLines={1}>
             {email || 'Signed in'}
           </Text>
-          <Text style={styles.profileMeta}>
-            {stats.total} {stats.total === 1 ? 'subscription' : 'subscriptions'} tracked
+          <Text style={t.caption}>
+            {stats.total} {stats.total === 1 ? 'mandate' : 'mandates'} tracked
           </Text>
         </View>
-      </Card>
+      </View>
 
-      <Text style={styles.sectionLabel}>Plan</Text>
+      <SectionHeader label="Plan" />
       <Pressable
-        onPress={() => (isPro && managementUrl ? Linking.openURL(managementUrl) : router.push('/paywall'))}
+        onPress={() =>
+          isPro && managementUrl ? Linking.openURL(managementUrl) : router.push('/paywall')
+        }
+        style={({ pressed }) => [styles.planRow, pressed && styles.pressed]}
       >
-        <Card style={[styles.planCard, isPro && styles.planCardPro]}>
-          <View style={[styles.planIcon, isPro && styles.planIconPro]}>
-            <Ionicons
-              name={isPro ? 'checkmark-circle' : 'sparkles'}
-              size={20}
-              color={isPro ? colors.success : colors.accent}
-            />
-          </View>
-          <View style={styles.planText}>
-            <Text style={styles.planTitle}>{isPro ? 'SubsTrack Pro' : 'Upgrade to Pro'}</Text>
-            <Text style={styles.planSubtitle}>
-              {isPro
-                ? 'Active — tap to manage or cancel'
-                : 'Renewal reminders, price alerts and unlimited uploads'}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-        </Card>
+        <View style={styles.planText}>
+          <Text style={t.body}>{isPro ? 'SubsTrack Pro' : 'Unlock everything'}</Text>
+          <Text style={t.caption}>
+            {isPro ? 'Active — tap to manage' : 'One payment. Price alerts and exports.'}
+          </Text>
+        </View>
+        {isPro ? <Ionicons name="checkmark" size={16} color={color.saved} /> : null}
+        <Ionicons name="chevron-forward" size={16} color={color.muted} />
       </Pressable>
 
-      <Text style={styles.sectionLabel}>Spending</Text>
-      <Card style={styles.statsCard}>
-        <View style={styles.statRow}>
-          <Text style={styles.statLabel}>Per month</Text>
-          <Text style={styles.statValue}>{formatMoney(stats.monthly, currency)}</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.statRow}>
-          <Text style={styles.statLabel}>Per year</Text>
-          <Text style={styles.statValue}>{formatMoney(stats.yearly, currency)}</Text>
-        </View>
-      </Card>
+      <SectionHeader label="Spending" />
+      <KeyValueRow label="Per month">
+        <AmountText value={stats.monthly} currency={currency} />
+      </KeyValueRow>
+      <KeyValueRow label="Per year" last>
+        <AmountText value={stats.yearly} currency={currency} />
+      </KeyValueRow>
 
-      <Text style={styles.sectionLabel}>Where they came from</Text>
-      <Card style={styles.statsCard}>
-        <SourceRow
-          icon="scan-circle-outline"
-          label="Found in statements"
-          count={stats.imported}
-        />
-        <View style={styles.divider} />
-        <SourceRow icon="create-outline" label="Added manually" count={stats.manual} />
-      </Card>
-
-      <Button
-        label="Log out"
-        variant="danger"
-        onPress={handleLogout}
-        style={styles.logoutButton}
-      />
+      <Button label="Log out" variant="secondary" onPress={handleLogout} style={styles.logout} />
     </ScrollView>
   );
 }
 
-function SourceRow({
-  icon,
-  label,
-  count,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  count: number;
-}) {
-  return (
-    <View style={styles.statRow}>
-      <View style={styles.sourceLeft}>
-        <Ionicons name={icon} size={18} color={colors.accent} />
-        <Text style={styles.statLabel}>{label}</Text>
-      </View>
-      <Text style={styles.statValue}>{count}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: color.paper,
+  },
   content: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: gutter,
+    flexGrow: 1,
   },
-  title: {
-    ...typography.title,
-    marginBottom: spacing.lg,
-  },
-  profileCard: {
+  profile: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.white,
+    gap: space.md,
+    marginTop: space.lg,
+    padding: space.lg,
+    backgroundColor: color.surface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: color.hairline,
   },
   profileText: {
     flex: 1,
+    gap: 2,
   },
-  email: {
-    ...typography.subheading,
-    marginBottom: 2,
-  },
-  profileMeta: {
-    ...typography.bodyMuted,
-  },
-  sectionLabel: {
-    ...typography.label,
-    marginBottom: spacing.sm,
-  },
-  planCard: {
+  planRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  planCardPro: {
-    borderWidth: 1,
-    borderColor: colors.success,
-  },
-  planIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accentMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  planIconPro: {
-    backgroundColor: colors.background,
+    gap: space.md,
+    paddingVertical: space.md + 2,
   },
   planText: {
     flex: 1,
+    gap: 2,
   },
-  planTitle: {
-    ...typography.subheading,
-    marginBottom: 2,
+  logout: {
+    marginTop: space.xxl,
   },
-  planSubtitle: {
-    ...typography.bodyMuted,
-  },
-  statsCard: {
-    marginBottom: spacing.lg,
-    paddingVertical: spacing.xs,
-  },
-  statRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm + 2,
-  },
-  sourceLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  statLabel: {
-    ...typography.body,
-    color: colors.textMuted,
-  },
-  statValue: {
-    ...typography.subheading,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  logoutButton: {
-    marginTop: spacing.sm,
+  pressed: {
+    opacity: 0.6,
   },
 });

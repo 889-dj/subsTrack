@@ -3,14 +3,15 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, Vi
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { usePurchases } from '@/src/hooks/usePurchases';
 import type { Plan } from '@/src/lib/purchases';
-import { colors, radius, spacing, typography } from '@/src/theme';
+import { color, font, gutter, radius, space, text as t } from '@/src/theme';
 
 const PRO_FEATURES = [
-  'Unlimited statement uploads',
+  'Unlimited mandates tracked',
   'Renewal reminders before you get charged',
-  'Price-hike alerts on the subscriptions you keep',
+  'Price-hike alerts on the mandates you keep',
   'Export everything to CSV',
 ];
 
@@ -97,32 +98,41 @@ export default function PaywallScreen() {
   }
 
   const canBuy = plans.length > 0 && busy === null;
+  const activePlan = plans.find((p) => p.period === selected);
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.badge}>
-        <Ionicons name="sparkles" size={16} color={colors.accent} />
-        <Text style={styles.badgeText}>SubsTrack Pro</Text>
-      </View>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      <ScreenHeader dismiss="close" />
 
-      <Text style={styles.title}>Stop paying for what you forgot</Text>
-      <Text style={styles.subtitle}>
-        Pro keeps reading your statements, tells you before a renewal lands, and flags the prices
-        that quietly went up.
-      </Text>
+      <Text style={t.title}>The subscription tracker that isn't a subscription.</Text>
+
+      {activePlan ? (
+        <View style={styles.priceBlock}>
+          <Text style={styles.heroPrice}>{activePlan.priceString}</Text>
+          <Text style={t.caption}>
+            {selected === 'annual' ? 'billed yearly' : 'billed monthly'}
+          </Text>
+        </View>
+      ) : (
+        <Text style={styles.lede}>Pay once. See everything that's charging you.</Text>
+      )}
 
       <View style={styles.features}>
         {PRO_FEATURES.map((feature) => (
           <View key={feature} style={styles.featureRow}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-            <Text style={styles.featureText}>{feature}</Text>
+            <Text style={styles.featureMark}>✓</Text>
+            <Text style={t.body}>{feature}</Text>
           </View>
         ))}
       </View>
 
       {isLoadingPlans && plans.length === 0 ? (
         <View style={styles.plansLoading}>
-          <ActivityIndicator color={colors.accent} />
+          <ActivityIndicator color={color.indigo} />
         </View>
       ) : null}
 
@@ -155,23 +165,15 @@ export default function PaywallScreen() {
 
       {message ? <Text style={styles.message}>{message}</Text> : null}
 
-      <Button
-        label="Continue"
-        onPress={handlePurchase}
-        loading={busy === 'purchase'}
-        disabled={!canBuy}
-        style={styles.cta}
-      />
+      <Button label="Unlock" onPress={handlePurchase} loading={busy === 'purchase'} disabled={!canBuy} style={styles.cta} />
 
       <Pressable onPress={handleRestore} disabled={busy !== null} hitSlop={8}>
-        <Text style={styles.restore}>
-          {busy === 'restore' ? 'Restoring…' : 'Restore purchases'}
-        </Text>
+        <Text style={styles.restore}>{busy === 'restore' ? 'Restoring…' : 'Restore purchase'}</Text>
       </Pressable>
 
       <Text style={styles.fineprint}>
-        Payment is charged to your store account. The subscription renews automatically unless you
-        cancel at least 24 hours before the period ends. Manage or cancel it in your store settings.
+        Charged to your store account. Renews automatically unless you cancel at least 24 hours
+        before the period ends. Manage or cancel it in your store settings.
       </Text>
 
       <View style={styles.legalRow}>
@@ -187,15 +189,7 @@ export default function PaywallScreen() {
   );
 }
 
-function PlanCard({
-  plan,
-  selected,
-  onSelect,
-}: {
-  plan: Plan;
-  selected: boolean;
-  onSelect: () => void;
-}) {
+function PlanCard({ plan, selected, onSelect }: { plan: Plan; selected: boolean; onSelect: () => void }) {
   const isAnnual = plan.period === 'annual';
 
   return (
@@ -218,7 +212,7 @@ function PlanCard({
             </View>
           ) : null}
         </View>
-        <Text style={styles.planMeta}>
+        <Text style={t.caption}>
           {isAnnual && plan.pricePerMonthString
             ? `${plan.pricePerMonthString} per month, billed yearly`
             : 'Billed monthly'}
@@ -242,7 +236,7 @@ function Notice({
   const router = useRouter();
   return (
     <View style={styles.notice}>
-      <Ionicons name="information-circle-outline" size={32} color={colors.accent} />
+      <Ionicons name="information-circle-outline" size={28} color={color.indigo} />
       <Text style={styles.noticeTitle}>{title}</Text>
       <Text style={styles.noticeBody}>{body}</Text>
       {action ? (
@@ -254,82 +248,83 @@ function Notice({
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: color.paper,
+  },
   content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingHorizontal: gutter,
+    paddingBottom: space.xxl,
   },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: spacing.xs,
-    backgroundColor: colors.accentMuted,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radius.pill,
-    marginBottom: spacing.md,
+  priceBlock: {
+    alignItems: 'flex-start',
+    marginTop: space.xl,
+    marginBottom: space.xl,
   },
-  badgeText: {
-    ...typography.label,
-    color: colors.accent,
+  heroPrice: {
+    fontFamily: font.monoMed,
+    fontSize: 56,
+    lineHeight: 60,
+    letterSpacing: -1.5,
+    color: color.ink,
+    marginBottom: space.xs,
   },
-  title: {
-    ...typography.title,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    ...typography.bodyMuted,
-    lineHeight: 21,
-    marginBottom: spacing.lg,
+  lede: {
+    ...t.body,
+    color: color.muted,
+    marginTop: space.md,
+    marginBottom: space.xl,
   },
   features: {
-    gap: spacing.sm + 2,
-    marginBottom: spacing.lg,
+    gap: space.md,
+    marginBottom: space.xl,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: space.md,
   },
-  featureText: {
-    ...typography.body,
-    flex: 1,
+  featureMark: {
+    fontFamily: font.monoMed,
+    fontSize: 14,
+    color: color.indigo,
+    width: 16,
   },
   plansLoading: {
-    paddingVertical: spacing.xl,
+    paddingVertical: space.xl,
   },
   planCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 2,
-    borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.sm + 2,
+    gap: space.md,
+    backgroundColor: color.surface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: color.hairline,
+    padding: space.lg,
+    marginBottom: space.sm,
   },
   planCardSelected: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentMuted,
+    borderColor: color.indigo,
+    backgroundColor: color.indigoBg,
   },
   radio: {
-    width: 22,
-    height: 22,
-    borderRadius: radius.pill,
-    borderWidth: 2,
-    borderColor: colors.border,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: color.hairline,
     alignItems: 'center',
     justifyContent: 'center',
   },
   radioSelected: {
-    borderColor: colors.accent,
+    borderColor: color.indigo,
   },
   radioDot: {
     width: 10,
     height: 10,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accent,
+    borderRadius: 5,
+    backgroundColor: color.indigo,
   },
   planText: {
     flex: 1,
@@ -337,94 +332,100 @@ const styles = StyleSheet.create({
   planHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: space.sm,
     marginBottom: 2,
   },
   planName: {
-    ...typography.subheading,
+    ...t.body,
+    fontFamily: font.sansSemi,
   },
   savings: {
-    backgroundColor: colors.success,
-    paddingHorizontal: spacing.sm,
+    backgroundColor: color.savedBg,
+    paddingHorizontal: space.sm,
     paddingVertical: 2,
-    borderRadius: radius.pill,
+    borderRadius: radius.chip,
   },
   savingsText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.white,
-  },
-  planMeta: {
-    ...typography.bodyMuted,
+    fontFamily: font.monoMed,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    color: color.saved,
   },
   planPrice: {
-    ...typography.subheading,
+    ...t.amount,
   },
   cta: {
-    marginTop: spacing.md,
+    marginTop: space.md,
   },
   restore: {
-    ...typography.label,
-    color: colors.accent,
+    fontFamily: font.monoMed,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: color.indigo,
     textAlign: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: space.md,
   },
   message: {
-    ...typography.bodyMuted,
-    color: colors.danger,
-    marginTop: spacing.sm,
+    ...t.caption,
+    color: color.debit,
+    marginTop: space.sm,
   },
   errorBox: {
-    backgroundColor: colors.dangerMuted,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: color.hairline,
+    borderRadius: radius.card,
+    padding: space.md,
+    gap: space.sm,
+    marginBottom: space.md,
   },
   errorText: {
-    ...typography.bodyMuted,
-    color: colors.danger,
+    ...t.caption,
+    color: color.debit,
   },
   link: {
-    ...typography.label,
-    color: colors.danger,
+    fontFamily: font.monoMed,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: color.debit,
   },
   fineprint: {
-    ...typography.caption,
-    lineHeight: 17,
+    ...t.caption,
     textAlign: 'center',
+    marginTop: space.md,
   },
   legalRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
+    gap: space.sm,
+    marginTop: space.sm,
   },
   legalLink: {
-    ...typography.caption,
-    color: colors.accent,
+    ...t.caption,
+    color: color.indigo,
   },
   legalDot: {
-    ...typography.caption,
+    ...t.caption,
   },
   notice: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.lg,
-    gap: spacing.sm,
+    paddingHorizontal: gutter,
+    gap: space.sm,
   },
   noticeTitle: {
-    ...typography.heading,
+    ...t.title,
     textAlign: 'center',
-    marginTop: spacing.sm,
+    marginTop: space.sm,
   },
   noticeBody: {
-    ...typography.bodyMuted,
+    ...t.body,
+    color: color.muted,
     textAlign: 'center',
-    lineHeight: 21,
-    marginBottom: spacing.sm,
+    marginBottom: space.sm,
   },
   noticeButton: {
     alignSelf: 'stretch',

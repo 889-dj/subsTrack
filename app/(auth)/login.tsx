@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { TextField } from '@/src/components/TextField';
 import { useAuth } from '@/src/hooks/useAuth';
-import { colors, spacing, typography } from '@/src/theme';
+import { color, font, gutter, space, text as t } from '@/src/theme';
 
 type Mode = 'login' | 'register';
 
@@ -32,7 +32,7 @@ export default function LoginScreen() {
   async function handleSubmit() {
     setError(null);
     if (!email.trim() || !password) {
-      setError('Please fill in both email and password.');
+      setError('Fill in both email and password.');
       return;
     }
     setSubmitting(true);
@@ -45,28 +45,24 @@ export default function LoginScreen() {
       }
       router.replace('/');
     } catch (e: any) {
-      setError(e?.message ?? 'Something went wrong. Please try again.');
+      setError(e?.message ?? 'Something went wrong. Try again.');
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={styles.brand}>SubTracker</Text>
-          <Text style={styles.title}>{isRegister ? 'Create your account' : 'Welcome back'}</Text>
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <Text style={styles.wordmark}>SUBSTRACK</Text>
+          <Text style={styles.title}>
+            {isRegister ? 'Let\'s find everything charging your account.' : 'Welcome back.'}
+          </Text>
           <Text style={styles.subtitle}>
             {isRegister
-              ? 'Track every subscription in one place.'
-              : 'Log in to see what you’re spending.'}
+              ? 'Most of it is hidden in four or five places.'
+              : 'Log in to see what you committed to.'}
           </Text>
 
           <View style={styles.form}>
@@ -93,7 +89,6 @@ export default function LoginScreen() {
               label={isRegister ? 'Create account' : 'Log in'}
               onPress={handleSubmit}
               loading={submitting}
-              style={styles.submitButton}
             />
           </View>
 
@@ -118,47 +113,47 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: color.paper,
   },
   content: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xxl,
+    paddingHorizontal: gutter,
+    paddingVertical: space.xxl,
   },
-  brand: {
-    ...typography.label,
-    color: colors.accent,
-    letterSpacing: 1,
-    marginBottom: spacing.sm,
+  wordmark: {
+    fontFamily: font.monoMed,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: color.indigo,
+    marginBottom: space.lg,
   },
   title: {
-    ...typography.title,
-    marginBottom: spacing.xs,
+    ...t.title,
+    marginBottom: space.xs,
   },
   subtitle: {
-    ...typography.bodyMuted,
-    marginBottom: spacing.xl,
+    ...t.body,
+    color: color.muted,
+    marginBottom: space.xl,
   },
   form: {
-    marginBottom: spacing.lg,
-  },
-  submitButton: {
-    marginTop: spacing.sm,
+    marginBottom: space.lg,
+    gap: 0,
   },
   error: {
-    color: colors.danger,
-    fontSize: 14,
-    marginBottom: spacing.md,
+    ...t.caption,
+    color: color.debit,
+    marginBottom: space.md,
   },
   toggle: {
     alignItems: 'center',
   },
   toggleText: {
-    ...typography.bodyMuted,
+    ...t.caption,
   },
   toggleLink: {
-    color: colors.accent,
-    fontWeight: '600',
+    color: color.indigo,
+    fontFamily: font.sansMed,
   },
 });

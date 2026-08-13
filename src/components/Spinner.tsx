@@ -1,11 +1,15 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { colors } from '@/src/theme';
+import { color } from '@/src/theme';
 
+/**
+ * Only for whole-screen gates (auth resolution). List loading uses
+ * `SkeletonList` — a spinner in a list loses the page's shape.
+ */
 export function Spinner() {
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color={colors.accent} />
+      <ActivityIndicator size="large" color={color.indigo} />
     </View>
   );
 }
@@ -15,5 +19,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: color.paper,
   },
 });
