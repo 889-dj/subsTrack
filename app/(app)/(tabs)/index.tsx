@@ -1,184 +1,191 @@
-import React, { useMemo } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AmountText } from '@/src/components/AmountText';
+import Animated from 'react-native-reanimated';
 import { EmptyState } from '@/src/components/EmptyState';
-import { Money } from '@/src/components/Money';
+import { Icon } from '@/src/components/Icon';
+import { Logo } from '@/src/components/Logo';
+import { MultiRenewalSheet } from '@/src/components/MultiRenewalSheet';
 import { SectionHeader } from '@/src/components/SectionHeader';
 import { SkeletonList } from '@/src/components/SkeletonRow';
-import { StatementRow } from '@/src/components/StatementRow';
-import { TAB_BAR_CLEARANCE } from '@/src/components/StatementTabBar';
+import { SpendingHero } from '@/src/components/SpendingHero';
+import { SpendingTrendChart, type ChartVariant } from '@/src/components/SpendingTrendChart';
+import { TAB_BAR_CLEARANCE } from '@/src/components/BottomNav';
+import { UpcomingPayment } from '@/src/components/UpcomingPayment';
+import { useAuth } from '@/src/hooks/useAuth';
+import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
-import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
-import { monthlyCost, monthlyTotal } from '@/src/utils/money';
-import type { Subscription } from '@/src/types';
+import { gutter, space, type Palette, type TextStyles } from '@/src/theme';
+import { monthlyTotal } from '@/src/utils/money';
+import {
+  groupByRenewalDate,
+  synthesizeSpendTrend,
+  type RenewalGroup,
+} from '@/src/utils/subscriptions';
 
-const DAY = 24 * 60 * 60 * 1000;
+const RANGES = ['1M', '3M', '6M', '1Y'] as const;
+type Range = (typeof RANGES)[number];
+const RANGE_POINTS: Record<Range, number> = { '1M': 6, '3M': 9, '6M': 12, '1Y': 12 };
 
-/** Annual spend grouped by category, biggest first. */
-function spendByCategory(subs: Subscription[]): { category: string; amount: number }[] {
-  const totals = new Map<string, number>();
-  for (const sub of subs) {
-    const key = sub.category ?? 'Uncategorised';
-    totals.set(key, (totals.get(key) ?? 0) + monthlyCost(sub) * 12);
-  }
-  return [...totals.entries()]
-    .map(([category, amount]) => ({ category, amount }))
-    .sort((a, b) => b.amount - a.amount);
+function greeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
 }
 
-function dayLabel(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-IN', { weekday: 'short' }).toUpperCase();
-}
-
-function dateLabel(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-}
-
-export default function HomeScreen() {
+export default function OverviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const { data, isLoading, isError, refetch, isRefetching } = useSubscriptions();
+  const { onScroll } = useTabBarScroll();
+
+  const [range, setRange] = useState<Range>('6M');
+  const [chartVariant, setChartVariant] = useState<ChartVariant>('area');
+  const [activeGroup, setActiveGroup] = useState<RenewalGroup | null>(null);
 
   const subs = useMemo(() => data ?? [], [data]);
   const monthly = useMemo(() => monthlyTotal(subs), [subs]);
-  const annual = monthly * 12;
-  const byCategory = useMemo(() => spendByCategory(subs), [subs]);
+  const yearly = monthly * 12;
   const currency = subs[0]?.currency ?? 'INR';
 
-  const sorted = useMemo(
-    () =>
-      [...subs].sort(
-        (a, b) => new Date(a.nextRenewalDate).getTime() - new Date(b.nextRenewalDate).getTime()
-      ),
-    [subs]
-  );
+  const renewalGroups = useMemo(() => groupByRenewalDate(subs), [subs]);
+  const upcomingGroups = useMemo(() => renewalGroups.slice(0, 5), [renewalGroups]);
 
-  const dueThisWeek = useMemo(() => {
-    const cutoff = Date.now() + 7 * DAY;
-    return sorted.filter((s) => new Date(s.nextRenewalDate).getTime() <= cutoff);
-  }, [sorted]);
+  const trend = useMemo(() => synthesizeSpendTrend(subs, RANGE_POINTS[range]), [subs, range]);
 
-  const isEmpty = subs.length === 0;
-  const maxCategory = byCategory[0]?.amount ?? 1;
+  // Illustrative delta only — there's no real spend history in the mock
+  // backend, so this is derived deterministically from the trend rather than
+  // fabricated with a random number each render.
+  const deltaPercent = useMemo(() => {
+    if (trend.length < 2) return undefined;
+    const prev = trend[trend.length - 2];
+    if (!prev) return undefined;
+    return ((trend[trend.length - 1] - prev) / prev) * 100;
+  }, [trend]);
+
+  const name = user?.email?.split('@')[0] || 'there';
+  const isEmpty = !isLoading && subs.length === 0;
 
   return (
-    <ScrollView
+    <Animated.ScrollView
       style={styles.screen}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: insets.top + space.lg, paddingBottom: TAB_BAR_CLEARANCE + space.xxl },
+        { paddingTop: insets.top + space.md, paddingBottom: TAB_BAR_CLEARANCE + space.xxl },
       ]}
       showsVerticalScrollIndicator={false}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
       refreshControl={
         <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.indigo} />
       }
     >
-      <Text style={styles.wordmark}>SUBSTRACK</Text>
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <Text style={t.heading} numberOfLines={1}>
+            {greeting()}, {name}
+          </Text>
+          <Text style={styles.subtitle}>Your subscriptions at a glance</Text>
+        </View>
+        <View style={styles.headerActions}>
+          <Pressable hitSlop={10} style={styles.iconButton}>
+            <Icon name="notifications-outline" size={20} color={colors.ink} />
+          </Pressable>
+          <Pressable hitSlop={10} onPress={() => router.push('/account')}>
+            <Logo name={user?.email || '?'} size={36} />
+          </Pressable>
+        </View>
+      </View>
 
       {isLoading ? (
-        <SkeletonList count={6} />
+        <SkeletonList count={5} />
       ) : (
         <>
-          <View style={styles.headerCard}>
-            <Text style={t.label}>Committed annually</Text>
-            <Money value={annual} currency={currency} size="total" animate style={styles.total} />
-            <View style={styles.subline}>
-              <AmountText value={monthly} currency={currency} tone="muted" size={13} />
-              <Text style={styles.sublineText}>
-                {' '}
-                / month · {subs.length} active
-              </Text>
-            </View>
-          </View>
+          <SpendingHero
+            monthly={monthly}
+            yearly={yearly}
+            currency={currency}
+            activeCount={subs.length}
+            deltaPercent={deltaPercent}
+          />
 
-          {isError ? (
-            <Text style={styles.error}>
-              Couldn't load your mandates. Pull down to try again.
-            </Text>
-          ) : null}
+          {isError ? <Text style={styles.error}>Couldn't refresh — showing the last data.</Text> : null}
 
-          {byCategory.length > 1 ? (
-            <>
-              <SectionHeader label="Where it goes" />
-              <View style={styles.bars}>
-                {byCategory.slice(0, 4).map((entry) => (
-                  <View key={entry.category} style={styles.barRow}>
-                    <Text style={styles.barLabel} numberOfLines={1}>
-                      {entry.category}
-                    </Text>
-                    <AmountText value={entry.amount} currency={currency} size={13} />
-                    <View style={styles.barTrack}>
-                      <View
-                        style={[
-                          styles.barFill,
-                          { width: `${Math.max(6, (entry.amount / maxCategory) * 100)}%` },
-                        ]}
-                      />
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </>
-          ) : null}
-
-          <SectionHeader label="Next 7 days" />
-          {dueThisWeek.length > 0 ? (
-            dueThisWeek.map((sub, i) => (
-              <StatementRow
-                key={sub.id}
-                name={sub.name}
-                amount={sub.cost}
-                currency={sub.currency}
-                variant="upcoming"
-                day={dayLabel(sub.nextRenewalDate)}
-                approx={sub.currency !== 'INR'}
-                last={i === dueThisWeek.length - 1}
-                onPress={() => router.push(`/${sub.id}`)}
-              />
-            ))
-          ) : (
-            <View style={styles.quiet}>
-              <Text style={t.body}>Nothing due this week.</Text>
-              {sorted[0] ? (
-                <Text style={t.caption}>
-                  Next is {sorted[0].name} on {dateLabel(sorted[0].nextRenewalDate)}.
-                </Text>
-              ) : null}
-            </View>
-          )}
-
-          <SectionHeader label={`All mandates · ${subs.length}`} />
+          <SectionHeader
+            label="Coming up"
+            trailing={
+              <Pressable onPress={() => router.push('/subscriptions')} hitSlop={8}>
+                <Text style={styles.link}>See all</Text>
+              </Pressable>
+            }
+          />
           {isEmpty ? (
             <EmptyState
-              title="No mandates yet."
+              title="No subscriptions yet."
               subtitle="Add what's charging you and we'll keep the total honest."
               icon="reader-outline"
-              action={{ label: 'Add a mandate', onPress: () => router.push('/add') }}
+              action={{ label: 'Add a subscription', onPress: () => router.push('/add') }}
+            />
+          ) : upcomingGroups.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.upcomingRow}
+            >
+              {upcomingGroups.map((group) => (
+                <UpcomingPayment
+                  key={group.dateKey}
+                  subs={group.subs}
+                  onPress={() => setActiveGroup(group)}
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={t.caption}>Nothing scheduled right now.</Text>
+          )}
+
+          <View style={styles.spendingHeader}>
+            <Text style={t.section}>Spending</Text>
+            <View style={styles.segmented}>
+              {RANGES.map((r) => (
+                <Pressable
+                  key={r}
+                  onPress={() => setRange(r)}
+                  style={[styles.segment, range === r && styles.segmentActive]}
+                >
+                  <Text style={[styles.segmentText, range === r && styles.segmentTextActive]}>
+                    {r}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+          {subs.length > 0 ? (
+            <SpendingTrendChart
+              trend={trend}
+              variant={chartVariant}
+              onVariantChange={setChartVariant}
             />
           ) : (
-            sorted.map((sub, i) => (
-              <StatementRow
-                key={sub.id}
-                name={sub.name}
-                amount={sub.cost}
-                currency={sub.currency}
-                sublabel={`${sub.billingCycle === 'yearly' ? 'Yearly' : 'Monthly'} · ${
-                  sub.category ?? 'Uncategorised'
-                }`}
-                approx={sub.currency !== 'INR'}
-                last={i === sorted.length - 1}
-                onPress={() => router.push(`/${sub.id}`)}
-              />
-            ))
+            <Text style={t.caption}>Add a subscription to see your trend.</Text>
           )}
+
         </>
       )}
-    </ScrollView>
+
+      <MultiRenewalSheet
+        visible={!!activeGroup}
+        onClose={() => setActiveGroup(null)}
+        date={activeGroup?.date ?? null}
+        subs={activeGroup?.subs ?? []}
+      />
+    </Animated.ScrollView>
   );
 }
 
@@ -192,61 +199,71 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       paddingHorizontal: gutter,
       flexGrow: 1,
     },
-    wordmark: {
-      fontFamily: font.monoMed,
-      fontSize: 11,
-      letterSpacing: 2,
-      color: colors.indigo,
-      marginBottom: space.lg,
-    },
-    headerCard: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.card,
-      borderWidth: 1,
-      borderColor: colors.hairline,
-      padding: space.lg,
-    },
-    total: {
-      marginTop: space.sm,
-    },
-    subline: {
+    header: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginTop: space.sm,
+      justifyContent: 'space-between',
+      marginBottom: space.xl,
     },
-    sublineText: {
+    headerText: {
+      flex: 1,
+      marginRight: space.md,
+    },
+    subtitle: {
       ...t.caption,
+      marginTop: 4,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+    },
+    iconButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.paper2,
     },
     error: {
       ...t.caption,
       color: colors.debit,
       marginTop: space.md,
     },
-    bars: {
-      marginTop: space.md,
-      gap: space.md,
+    link: {
+      ...t.caption,
+      color: colors.indigo,
     },
-    barRow: {
+    upcomingRow: {
+      gap: space.sm,
+      paddingRight: gutter,
+    },
+    spendingHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: space.md,
+      justifyContent: 'space-between',
+      marginTop: space.xl,
     },
-    barLabel: {
-      ...t.caption,
-      color: colors.ink,
-      flex: 1,
+    segmented: {
+      flexDirection: 'row',
+      backgroundColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.paper2,
+      borderRadius: 10,
+      padding: 2,
     },
-    barTrack: {
-      width: 64,
-      height: 8,
-      backgroundColor: colors.indigoBg,
+    segment: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 8,
     },
-    barFill: {
-      height: '100%',
+    segmentActive: {
       backgroundColor: colors.indigo,
     },
-    quiet: {
-      paddingVertical: space.lg,
-      gap: space.xs,
+    segmentText: {
+      fontSize: 11,
+      color: colors.muted,
+    },
+    segmentTextActive: {
+      color: colors.white,
     },
   });

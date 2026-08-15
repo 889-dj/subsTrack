@@ -1,3 +1,4 @@
+import '../src/global.css';
 import 'react-native-gesture-handler';
 import React from 'react';
 import { useColorScheme, View } from 'react-native';
@@ -7,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, Geist_400Regular, Geist_500Medium, Geist_600SemiBold } from '@expo-google-fonts/geist';
 import { GeistMono_400Regular, GeistMono_500Medium } from '@expo-google-fonts/geist-mono';
+import { PanelUIProvider } from 'panelui-native';
 import { setupMockApi } from '@/src/api/mock';
 import { AuthProvider } from '@/src/hooks/useAuth';
 import { PurchasesProvider } from '@/src/hooks/usePurchases';
@@ -44,15 +46,17 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <PurchasesProvider>
-              <AppShell />
-            </PurchasesProvider>
-          </AuthProvider>
-        </QueryClientProvider>
-      </ThemeProvider>
+      <PanelUIProvider>
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <PurchasesProvider>
+                <AppShell />
+              </PurchasesProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </ThemeProvider>
+      </PanelUIProvider>
     </SafeAreaProvider>
   );
 }

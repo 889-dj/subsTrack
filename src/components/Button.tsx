@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextStyle, ViewStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/src/hooks/useTheme';
-import { font, radius, space, type Palette } from '@/src/theme';
+import { font, gradients, radius, space, type Palette } from '@/src/theme';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
@@ -31,6 +32,34 @@ export function Button({
   const { colors } = useTheme();
   const { styles, variantStyles, textVariantStyles } = useMemo(() => createStyles(colors), [colors]);
   const isDisabled = disabled || loading;
+
+  if (variant === 'primary' && colors.isDark) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        disabled={isDisabled}
+        style={({ pressed }) => [
+          isDisabled && styles.disabled,
+          pressed && !isDisabled && styles.pressed,
+          style,
+        ]}
+      >
+        <LinearGradient
+          colors={gradients.primary}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.base}
+        >
+          {loading ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={[styles.label, textVariantStyles.primary]}>{label}</Text>
+          )}
+        </LinearGradient>
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable

@@ -12,8 +12,131 @@ interface StoredUser extends User {
 }
 
 const users: StoredUser[] = [];
-let subscriptions: Subscription[] = [];
-let nextSubId = 1;
+
+/** ISO date `daysFromNow` days from "today", at a fixed time so renders are stable. */
+function inDays(daysFromNow: number): string {
+  const d = new Date();
+  d.setHours(9, 0, 0, 0);
+  d.setDate(d.getDate() + daysFromNow);
+  return d.toISOString();
+}
+
+function daysAgo(n: number): string {
+  return inDays(-n);
+}
+
+/**
+ * Seeded so the app looks populated the moment a user logs in — a spread of
+ * categories, currencies, and a shared renewal date (Netflix + Spotify both
+ * land on day 4) to exercise the multi-renewal UI without any user input.
+ */
+let subscriptions: Subscription[] = [
+  {
+    id: '1',
+    name: 'Netflix',
+    cost: 649,
+    currency: 'INR',
+    billingCycle: 'monthly',
+    nextRenewalDate: inDays(4),
+    category: 'Entertainment',
+    source: 'Card',
+    plan: 'Premium',
+    createdAt: daysAgo(280),
+    updatedAt: daysAgo(30),
+  },
+  {
+    id: '2',
+    name: 'Spotify',
+    cost: 119,
+    currency: 'INR',
+    billingCycle: 'monthly',
+    nextRenewalDate: inDays(4),
+    category: 'Music',
+    source: 'Google Pay',
+    plan: 'Individual',
+    createdAt: daysAgo(400),
+    updatedAt: daysAgo(60),
+  },
+  {
+    id: '3',
+    name: 'Figma',
+    cost: 12,
+    currency: 'USD',
+    billingCycle: 'monthly',
+    nextRenewalDate: inDays(9),
+    category: 'Software',
+    source: 'Card',
+    plan: 'Professional',
+    createdAt: daysAgo(200),
+    updatedAt: daysAgo(20),
+  },
+  {
+    id: '4',
+    name: 'YouTube Premium',
+    cost: 149,
+    currency: 'INR',
+    billingCycle: 'monthly',
+    nextRenewalDate: inDays(2),
+    category: 'Entertainment',
+    source: 'Google Pay',
+    plan: 'Individual',
+    createdAt: daysAgo(150),
+    updatedAt: daysAgo(15),
+  },
+  {
+    id: '5',
+    name: 'Notion',
+    cost: 8,
+    currency: 'USD',
+    billingCycle: 'monthly',
+    nextRenewalDate: inDays(14),
+    category: 'Software',
+    source: 'Card',
+    plan: 'Plus',
+    createdAt: daysAgo(100),
+    updatedAt: daysAgo(10),
+  },
+  {
+    id: '6',
+    name: 'Adobe Creative Cloud',
+    cost: 52.99,
+    currency: 'USD',
+    billingCycle: 'monthly',
+    nextRenewalDate: inDays(21),
+    category: 'Software',
+    source: 'Card',
+    plan: 'All Apps',
+    createdAt: daysAgo(500),
+    updatedAt: daysAgo(45),
+  },
+  {
+    id: '7',
+    name: 'Dropbox',
+    cost: 1499,
+    currency: 'INR',
+    billingCycle: 'yearly',
+    nextRenewalDate: inDays(45),
+    category: 'Cloud & Storage',
+    source: 'Net Banking',
+    plan: 'Plus',
+    createdAt: daysAgo(320),
+    updatedAt: daysAgo(90),
+  },
+  {
+    id: '8',
+    name: 'ChatGPT',
+    cost: 20,
+    currency: 'USD',
+    billingCycle: 'monthly',
+    nextRenewalDate: inDays(7),
+    category: 'Software',
+    source: 'Card',
+    plan: 'Plus',
+    createdAt: daysAgo(60),
+    updatedAt: daysAgo(5),
+  },
+];
+let nextSubId = subscriptions.length + 1;
 let nextUserId = 1;
 
 function tokenFor(user: User): string {

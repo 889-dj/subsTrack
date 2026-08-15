@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
+import { Icon } from '@/src/components/Icon';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { usePurchases } from '@/src/hooks/usePurchases';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -244,7 +244,7 @@ function Notice({
 
   return (
     <View style={styles.notice}>
-      <Ionicons name="information-circle-outline" size={28} color={colors.indigo} />
+      <Icon name="information-circle-outline" size={28} color={colors.indigo} />
       <Text style={styles.noticeTitle}>{title}</Text>
       <Text style={styles.noticeBody}>{body}</Text>
       {action ? (

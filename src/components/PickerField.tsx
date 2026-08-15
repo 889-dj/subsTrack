@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from '@/src/components/Icon';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
 
@@ -38,7 +38,7 @@ export function PickerField({ label, value, options, onChange, renderValue }: Pi
         <Text style={styles.fieldValue}>
           {renderValue ? renderValue(selected) : (selected?.label ?? value)}
         </Text>
-        <Ionicons name="chevron-down" size={16} color={colors.muted} />
+        <Icon name="chevron-down" size={16} color={colors.muted} />
       </Pressable>
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
@@ -65,7 +65,7 @@ export function PickerField({ label, value, options, onChange, renderValue }: Pi
                     </Text>
                     {item.meta ? <Text style={styles.rowMeta}>{item.meta}</Text> : null}
                     {isSelected ? (
-                      <Ionicons name="checkmark" size={16} color={colors.indigo} />
+                      <Icon name="checkmark" size={16} color={colors.indigo} />
                     ) : null}
                   </Pressable>
                 );

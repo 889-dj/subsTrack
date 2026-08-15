@@ -13,6 +13,7 @@ import {
 const STORAGE_KEY = 'theme-mode-preference';
 
 type ModePreference = ThemeMode | 'system';
+export type ThemeModePreference = ModePreference;
 
 interface ThemeContextValue {
   /** What the user picked — may be 'system'. */

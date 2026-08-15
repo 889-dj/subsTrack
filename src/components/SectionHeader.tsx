@@ -31,6 +31,6 @@ const createStyles = (colors: Palette) =>
       paddingBottom: space.sm,
       marginTop: space.xl,
       borderBottomWidth: 1,
-      borderBottomColor: colors.ink,
+      borderBottomColor: colors.hairline,
     },
   });

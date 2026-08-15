@@ -11,15 +11,15 @@ import { font } from '@/src/theme';
  * debit/saved, never decoration.
  */
 const DARK_TILES: { bg: string; fg: string }[] = [
-  { bg: '#3A1F1F', fg: '#E88A7D' },
-  { bg: '#1F3A28', fg: '#7ED9A0' },
-  { bg: '#1F2A3A', fg: '#7DAEE8' },
-  { bg: '#3A2F1F', fg: '#E8B77D' },
-  { bg: '#2A1F3A', fg: '#B47DE8' },
-  { bg: '#1F3A3A', fg: '#7DE8D8' },
+  { bg: 'rgba(139,92,246,0.16)', fg: '#B49CF8' },
+  { bg: 'rgba(94,231,255,0.14)', fg: '#7FDFEF' },
+  { bg: 'rgba(255,92,170,0.14)', fg: '#F090B8' },
+  { bg: 'rgba(94,230,168,0.14)', fg: '#7FE0B6' },
+  { bg: 'rgba(255,202,112,0.16)', fg: '#E8C084' },
+  { bg: 'rgba(255,107,122,0.14)', fg: '#EF95A0' },
 ];
 
-function hashTile(name: string): { bg: string; fg: string } {
+export function hashTile(name: string): { bg: string; fg: string } {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
   return DARK_TILES[hash % DARK_TILES.length];

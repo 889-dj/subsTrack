@@ -60,6 +60,8 @@ export interface Subscription {
   /** The app or method the mandate runs through, e.g. "Google Pay". */
   source?: string;
   note?: string;
+  /** Plan/tier label shown on the detail screen, e.g. "Premium", "Pro". Optional, synthetic. */
+  plan?: string;
   createdAt: string;
   updatedAt: string;
 }

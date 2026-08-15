@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon, type IconName } from '@/src/components/Icon';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font, space, type Palette, type TextStyles } from '@/src/theme';
 
@@ -8,7 +8,7 @@ interface EmptyStateProps {
   /** One line of direction. Not an apology, not a shrug. */
   title: string;
   subtitle?: string;
-  icon?: React.ComponentProps<typeof Ionicons>['name'];
+  icon?: IconName;
   action?: { label: string; onPress: () => void };
 }
 
@@ -18,7 +18,7 @@ export function EmptyState({ title, subtitle, icon = 'reader-outline', action }:
 
   return (
     <View style={styles.container}>
-      <Ionicons name={icon} size={22} color={colors.muted} />
+      <Icon name={icon} size={22} color={colors.muted} />
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       {action ? (

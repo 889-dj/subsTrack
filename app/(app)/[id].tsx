@@ -1,38 +1,36 @@
-import React, { useMemo } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { RingChart } from 'panelui-native';
 import { AmountText } from '@/src/components/AmountText';
 import { Button } from '@/src/components/Button';
 import { CategoryChip } from '@/src/components/CategoryChip';
 import { KeyValueRow } from '@/src/components/KeyValueRow';
-import { Logo } from '@/src/components/Logo';
-import { Money } from '@/src/components/Money';
 import { Screen } from '@/src/components/Screen';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { SectionHeader } from '@/src/components/SectionHeader';
 import { SkeletonList } from '@/src/components/SkeletonRow';
-import { useDeleteSubscription, useSubscription } from '@/src/hooks/useSubscriptions';
+import { SubscriptionIcon } from '@/src/components/SubscriptionIcon';
+import { useDeleteSubscription, useSubscription, useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { useTheme } from '@/src/hooks/useTheme';
-import { gutter, space, type Palette, type TextStyles } from '@/src/theme';
-import { monthlyCost } from '@/src/utils/money';
+import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
+import { monthlyCost, monthlyTotal } from '@/src/utils/money';
+import { longDate, synthesizePaymentHistory } from '@/src/utils/subscriptions';
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-IN', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
+const formatDate = longDate;
+
+type Tab = 'details' | 'history';
 
 export default function DetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const id = typeof params.id === 'string' ? params.id : undefined;
   const router = useRouter();
   const { data: subscription, isLoading, isError } = useSubscription(id);
+  const { data: allSubs } = useSubscriptions();
   const deleteMutation = useDeleteSubscription();
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
+  const [tab, setTab] = useState<Tab>('details');
 
   if (isLoading) {
     return (
@@ -72,69 +70,127 @@ export default function DetailScreen() {
     );
   }
 
-  const yearly = monthlyCost(subscription) * 12;
+  const itemMonthly = monthlyCost(subscription);
+  const wholeMonthly = monthlyTotal(allSubs ?? []) || itemMonthly;
+  const sharePercent = wholeMonthly > 0 ? Math.round((itemMonthly / wholeMonthly) * 100) : 0;
+  const history = synthesizePaymentHistory(subscription);
 
   return (
     <Screen padded={false}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <ScreenHeader />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScreenHeader
+          right={
+            <Button
+              label="Edit"
+              variant="ghost"
+              onPress={() => router.push(`/add?id=${subscription.id}`)}
+              style={styles.editButton}
+            />
+          }
+        />
 
-        <View style={styles.identity}>
-          <Logo name={subscription.name} size={48} />
-          <View style={styles.identityText}>
-            <Text style={t.title} numberOfLines={2}>
-              {subscription.name}
-            </Text>
-            <View style={styles.chips}>
-              <CategoryChip label={subscription.category ?? 'Uncategorised'} />
-              {subscription.source ? <CategoryChip label={subscription.source} /> : null}
-            </View>
+        <View style={styles.hero}>
+          <SubscriptionIcon name={subscription.name} size={64} />
+          <Text style={styles.name} numberOfLines={2}>
+            {subscription.name}
+          </Text>
+          <View style={styles.chips}>
+            <CategoryChip label={subscription.category ?? 'Other'} />
+            {subscription.plan ? <CategoryChip label={subscription.plan} /> : null}
+            {subscription.source ? <CategoryChip label={subscription.source} /> : null}
           </View>
         </View>
 
-        <View style={styles.hero}>
-          <Text style={t.label}>Committed annually</Text>
-          <Money value={yearly} currency={subscription.currency} size="total" style={styles.heroNumber} />
+        <View style={styles.ringCard}>
+          <RingChart
+            data={[{ label: subscription.name, value: itemMonthly, maxValue: wholeMonthly }]}
+            size={116}
+            strokeWidth={10}
+          >
+            <RingChart.Ring index={0} colorIndex={1} />
+            <RingChart.Center
+              formatValue={() => `${sharePercent}%`}
+              defaultLabel="of monthly spend"
+            />
+          </RingChart>
+          <View style={styles.ringCopy}>
+            <Text style={t.label}>Per month</Text>
+            <AmountText
+              value={itemMonthly}
+              currency={subscription.currency}
+              round={false}
+              size={26}
+              style={styles.ringAmount}
+            />
+            <Text style={styles.ringSub}>
+              {subscription.billingCycle === 'yearly'
+                ? `Billed ${subscription.currency} ${Math.round(subscription.cost).toLocaleString('en-IN')} once a year`
+                : 'Billed monthly'}
+            </Text>
+          </View>
         </View>
 
-        <SectionHeader label="The mandate" />
-        <KeyValueRow label="Amount">
-          <AmountText
-            value={subscription.cost}
-            currency={subscription.currency}
-            round={false}
-            tone="debit"
-          />
-        </KeyValueRow>
-        <KeyValueRow
-          label="Cycle"
-          value={subscription.billingCycle === 'yearly' ? 'Yearly' : 'Monthly'}
-        />
-        <KeyValueRow label="Next debit" value={formatDate(subscription.nextRenewalDate)} />
-        {subscription.source ? (
-          <KeyValueRow label="Paid via" value={subscription.source} />
-        ) : null}
-        <KeyValueRow
-          label="Added on"
-          value={formatDate(subscription.createdAt)}
-          last={!subscription.note}
-        />
-        {subscription.note ? (
-          <KeyValueRow label="Note" value={subscription.note} last />
-        ) : null}
+        <View style={styles.tabSwitch}>
+          <Pressable
+            onPress={() => setTab('details')}
+            style={[styles.tabItem, tab === 'details' && styles.tabItemActive]}
+          >
+            <Text style={[styles.tabText, tab === 'details' && styles.tabTextActive]}>Details</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setTab('history')}
+            style={[styles.tabItem, tab === 'history' && styles.tabItemActive]}
+          >
+            <Text style={[styles.tabText, tab === 'history' && styles.tabTextActive]}>History</Text>
+          </Pressable>
+        </View>
+
+        {tab === 'details' ? (
+          <>
+            <KeyValueRow label="Amount">
+              <AmountText
+                value={subscription.cost}
+                currency={subscription.currency}
+                round={false}
+                tone="debit"
+              />
+            </KeyValueRow>
+            <KeyValueRow
+              label="Cycle"
+              value={subscription.billingCycle === 'yearly' ? 'Yearly' : 'Monthly'}
+            />
+            <KeyValueRow label="Next renewal" value={formatDate(subscription.nextRenewalDate)} />
+            {subscription.source ? (
+              <KeyValueRow label="Paid via" value={subscription.source} />
+            ) : null}
+            <KeyValueRow
+              label="Added on"
+              value={formatDate(subscription.createdAt)}
+              last={!subscription.note}
+            />
+            {subscription.note ? (
+              <KeyValueRow label="Note" value={subscription.note} last />
+            ) : null}
+          </>
+        ) : history.length > 0 ? (
+          history.map((h, i) => (
+            <KeyValueRow key={h.date} label={formatDate(h.date)} last={i === history.length - 1}>
+              <AmountText value={h.amount} currency={subscription.currency} tone="muted" />
+            </KeyValueRow>
+          ))
+        ) : (
+          <Text style={t.caption}>No payment history yet.</Text>
+        )}
 
         <View style={styles.actions}>
           <Button
-            label="Edit"
+            label="Pause"
             variant="secondary"
-            onPress={() => router.push(`/add?id=${subscription.id}`)}
+            onPress={() => Alert.alert('Coming soon', 'Pausing a subscription isn’t wired up yet.')}
           />
           <Button
-            label="Cancel this"
-            variant="danger"
+            label="Cancel subscription"
+            variant="ghost"
             onPress={handleDelete}
             loading={deleteMutation.isPending}
             style={styles.cancelButton}
@@ -142,7 +198,7 @@ export default function DetailScreen() {
           <Text style={styles.honesty}>
             {subscription.source
               ? `We can't cancel this for you — it can only be stopped in ${subscription.source}.`
-              : "We can't cancel this for you — a UPI mandate can only be stopped in the app that created it."}
+              : "We can't cancel this for you — it can only be stopped in the app that created it."}
           </Text>
         </View>
       </ScrollView>
@@ -160,28 +216,72 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       ...t.body,
       color: colors.debit,
     },
-    identity: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: space.md,
+    editButton: {
+      height: 36,
+      paddingHorizontal: space.sm,
     },
-    identityText: {
-      flex: 1,
+    hero: {
+      alignItems: 'center',
       gap: space.sm,
+      marginTop: space.sm,
+      marginBottom: space.lg,
+    },
+    name: {
+      ...t.title,
+      textAlign: 'center',
     },
     chips: {
       flexDirection: 'row',
       gap: space.sm,
       flexWrap: 'wrap',
+      justifyContent: 'center',
     },
-    hero: {
+    ringCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.lg,
+      backgroundColor: colors.elevated,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      padding: space.lg,
+    },
+    ringCopy: {
+      flex: 1,
+      gap: 2,
+    },
+    ringAmount: {
+      marginTop: 2,
+    },
+    ringSub: {
+      ...t.caption,
+      marginTop: space.xs,
+    },
+    tabSwitch: {
+      flexDirection: 'row',
+      backgroundColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.paper2,
+      borderRadius: radius.cardSm,
+      padding: 3,
       marginTop: space.xl,
-      paddingTop: space.lg,
-      borderTopWidth: 1,
-      borderTopColor: colors.hairline,
+      marginBottom: space.sm,
     },
-    heroNumber: {
-      marginTop: space.sm,
+    tabItem: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: space.sm,
+      borderRadius: radius.cardSm - 3,
+    },
+    tabItemActive: {
+      backgroundColor: colors.surface,
+    },
+    tabText: {
+      ...t.caption,
+      fontSize: 13,
+      color: colors.muted,
+    },
+    tabTextActive: {
+      color: colors.ink,
+      fontFamily: font.sansMed,
     },
     actions: {
       marginTop: space.xxl,

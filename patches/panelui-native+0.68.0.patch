@@ -1,0 +1,28 @@
+diff --git a/node_modules/panelui-native/lib/module/primitives/chart-accessibility.js b/node_modules/panelui-native/lib/module/primitives/chart-accessibility.js
+index de2cb9f..8bc1d87 100644
+--- a/node_modules/panelui-native/lib/module/primitives/chart-accessibility.js
++++ b/node_modules/panelui-native/lib/module/primitives/chart-accessibility.js
+@@ -1,6 +1,7 @@
+ "use strict";
+ 
+ import { createElement } from 'react';
++import { Pressable as RNPressable, View as RNView } from 'react-native';
+ function spoken(value) {
+   if (value instanceof Date) return value.toLocaleDateString();
+   if (typeof value === 'string' || typeof value === 'number') return String(value);
+@@ -37,13 +38,8 @@ export function ChartAccessibilityData({
+   onAccessibilityDatumPress
+ }) {
+   if (disabled) return null;
+-  // Keep the pure semantic projection importable by Node tests without asking
+-  // Node to parse React Native's Flow entry point.
+-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+-  const {
+-    Pressable,
+-    View
+-  } = require('react-native');
++  const Pressable = RNPressable;
++  const View = RNView;
+   const model = chartAccessibilityModel(chart, data, valueOf, accessibilityLabelForDatum);
+   return /*#__PURE__*/createElement(View, {
+     style: {

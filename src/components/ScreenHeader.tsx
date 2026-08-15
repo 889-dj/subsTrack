@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from '@/src/components/Icon';
 import { useTheme } from '@/src/hooks/useTheme';
 import { space, type Palette, type TextStyles } from '@/src/theme';
 
@@ -38,7 +38,7 @@ export function ScreenHeader({
             accessibilityLabel={dismiss === 'close' ? 'Close' : 'Back'}
             style={({ pressed }) => pressed && styles.pressed}
           >
-            <Ionicons
+            <Icon
               name={dismiss === 'close' ? 'close' : 'arrow-back'}
               size={22}
               color={colors.ink}
