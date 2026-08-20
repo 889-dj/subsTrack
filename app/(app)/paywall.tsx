@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/src/components/Button';
 import { Icon } from '@/src/components/Icon';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
@@ -21,6 +22,7 @@ const PRIVACY_URL = 'https://substrack.app/privacy';
 
 export default function PaywallScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { status, isPro, plans, isLoadingPlans, plansError, reloadPlans, purchase, restore, managementUrl } =
     usePurchases();
   const { colors, text: t } = useTheme();
@@ -106,7 +108,10 @@ export default function PaywallScreen() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + space.sm, paddingBottom: insets.bottom + space.xxl },
+      ]}
       showsVerticalScrollIndicator={false}
     >
       <ScreenHeader dismiss="close" />

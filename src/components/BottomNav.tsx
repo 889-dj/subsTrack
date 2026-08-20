@@ -66,6 +66,7 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
         accessibilityRole="button"
         accessibilityState={focused ? { selected: true } : {}}
         accessibilityLabel={options.title ?? route.name}
+        accessibilityHint={`Opens the ${options.title ?? route.name} tab`}
         style={({ pressed }) => [styles.item, pressed && styles.pressed]}
       >
         <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
@@ -107,20 +108,19 @@ const createStyles = (colors: Palette) =>
       flexDirection: 'row',
       alignItems: 'center',
       height: TAB_BAR_HEIGHT,
-      borderRadius: radius.sheet,
+      borderRadius: radius.card,
       backgroundColor: colors.isDark ? 'rgba(18,21,27,0.94)' : colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
-      paddingHorizontal: space.sm,
-      gap: 2,
-      shadowColor: '#000',
-      shadowOpacity: colors.isDark ? 0.4 : 0.08,
-      shadowRadius: 20,
-      shadowOffset: { width: 0, height: 8 },
-      elevation: 6,
+      paddingHorizontal: 6,
+      gap: 1,
+      shadowOpacity: 0,
+      elevation: 0,
     },
     item: {
       flex: 1,
+      minWidth: 48,
+      minHeight: 48,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -137,7 +137,7 @@ const createStyles = (colors: Palette) =>
     addButton: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.indigo,

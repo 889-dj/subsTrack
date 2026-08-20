@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Money } from '@/src/components/Money';
-import { StatPill } from '@/src/components/StatPill';
 import { useTheme } from '@/src/hooks/useTheme';
-import { radius, space, type Palette, type TextStyles } from '@/src/theme';
+import { font, radius, space, type Palette, type TextStyles } from '@/src/theme';
 
 interface SpendingHeroProps {
   monthly: number;
@@ -27,21 +26,31 @@ export function SpendingHero({
   return (
     <View style={styles.wrap}>
       <View style={styles.card}>
-        <Text style={t.label}>Monthly spending</Text>
-        <View style={styles.numberRow}>
-          <Money value={monthly} currency={currency} size="hero" animate />
-          {typeof deltaPercent === 'number' ? (
-            <StatPill
-              label={`${deltaPercent >= 0 ? '+' : ''}${deltaPercent.toFixed(1)}% vs last month`}
-              icon={deltaPercent >= 0 ? 'trending-up' : 'trending-down'}
-              tone={deltaPercent >= 0 ? 'negative' : 'positive'}
-            />
-          ) : null}
+        <View style={styles.kickerRow}>
+          <Text style={styles.kicker}>CURRENT STATEMENT</Text>
+          <View style={styles.live}><View style={styles.liveDot} /><Text style={styles.liveText}>LIVE</Text></View>
         </View>
-
-        <View style={styles.pillRow}>
-          <StatPill label={`${activeCount} active subscription${activeCount === 1 ? '' : 's'}`} />
-          <StatPill label={`${currency} ${Math.round(yearly).toLocaleString('en-IN')} / year`} />
+        <View style={styles.numberRow}>
+          <Text style={styles.overline}>Recurring each month</Text>
+          <Money value={monthly} currency={currency} size="hero" tone="hero" animate />
+        </View>
+        <View style={styles.ledgerRow}>
+          <View style={styles.metric}>
+            <Text style={styles.metricValue}>{activeCount}</Text>
+            <Text style={styles.metricLabel}>ACTIVE</Text>
+          </View>
+          <View style={styles.rule} />
+          <View style={styles.metricWide}>
+            <Text style={styles.metricValue}>{currency} {Math.round(yearly).toLocaleString('en-IN')}</Text>
+            <Text style={styles.metricLabel}>YEARLY RUN RATE</Text>
+          </View>
+          {typeof deltaPercent === 'number' ? <>
+            <View style={styles.rule} />
+            <View style={styles.metric}>
+              <Text style={styles.metricValue}>{deltaPercent >= 0 ? '+' : ''}{deltaPercent.toFixed(1)}%</Text>
+              <Text style={styles.metricLabel}>CHANGE</Text>
+            </View>
+          </> : null}
         </View>
       </View>
     </View>
@@ -54,20 +63,32 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       position: 'relative',
     },
     card: {
-      backgroundColor: colors.elevated,
+      backgroundColor: colors.heroSurface,
       borderRadius: radius.card,
-      borderWidth: 1,
-      borderColor: colors.hairline,
       padding: space.xl,
+      overflow: 'hidden',
     },
+    kickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    kicker: { ...t.label, color: colors.heroMuted, letterSpacing: 1.2 },
+    live: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.savedBg },
+    liveText: { fontFamily: font.monoMed, fontSize: 10, color: colors.heroMuted, letterSpacing: 1 },
+    overline: { ...t.caption, color: colors.heroMuted },
     numberRow: {
-      marginTop: space.sm,
-      gap: space.md,
+      marginTop: space.xl,
+      gap: space.xs,
     },
-    pillRow: {
+    ledgerRow: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: space.sm,
-      marginTop: space.lg,
+      alignItems: 'stretch',
+      marginTop: space.xl,
+      paddingTop: space.lg,
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(255,255,255,0.16)',
     },
+    metric: { minWidth: 54 },
+    metricWide: { flex: 1, paddingHorizontal: space.md },
+    metricValue: { fontFamily: font.monoMed, fontSize: 13, color: colors.heroInk },
+    metricLabel: { fontFamily: font.mono, fontSize: 8.5, color: colors.heroMuted, letterSpacing: 0.7, marginTop: 4 },
+    rule: { width: 1, backgroundColor: 'rgba(255,255,255,0.16)', marginHorizontal: space.md },
   });

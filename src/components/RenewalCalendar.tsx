@@ -15,21 +15,25 @@ interface RenewalCalendarProps {
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-function buildCells(month: Date): (Date | null)[] {
+function buildWeeks(month: Date): (Date | null)[][] {
   const year = month.getFullYear();
   const m = month.getMonth();
   const firstDay = new Date(year, m, 1).getDay();
   const daysInMonth = new Date(year, m + 1, 0).getDate();
   const cells: (Date | null)[] = Array(firstDay).fill(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, m, d));
-  return cells;
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const weeks: (Date | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return weeks;
 }
 
 /** Minimal month grid — a dot (or "●●+N") on days with renewals, tap to select. */
 export function RenewalCalendar({ month, groups, selectedKey, onSelectDay }: RenewalCalendarProps) {
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
-  const cells = useMemo(() => buildCells(month), [month]);
+  const weeks = useMemo(() => buildWeeks(month), [month]);
   const groupByKey = useMemo(() => new Map(groups.map((g) => [g.dateKey, g])), [groups]);
   const todayKey = dayKey(new Date());
 
@@ -43,63 +47,66 @@ export function RenewalCalendar({ month, groups, selectedKey, onSelectDay }: Ren
         ))}
       </View>
       <View style={styles.grid}>
-        {cells.map((date, i) => {
-          if (!date) return <View key={i} style={styles.cell} />;
-          const key = dayKey(date);
-          const group = groupByKey.get(key);
-          const isToday = key === todayKey;
-          const isSelected = key === selectedKey;
+        {weeks.map((week, weekIndex) => (
+          <View key={weekIndex} style={styles.weekRow}>
+            {week.map((date, dayIndex) => {
+              if (!date) return <View key={dayIndex} style={styles.cell} />;
+              const key = dayKey(date);
+              const group = groupByKey.get(key);
+              const isToday = key === todayKey;
+              const isSelected = key === selectedKey;
 
-          return (
-            <Pressable
-              key={i}
-              style={styles.cell}
-              onPress={() => onSelectDay(date)}
-              disabled={!group}
-            >
-              <View
-                style={[
-                  styles.dayBox,
-                  isToday && styles.dayBoxToday,
-                  isSelected && styles.dayBoxSelected,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.dayText,
-                    isToday && styles.dayTextToday,
-                    isSelected && styles.dayTextSelected,
-                  ]}
+              return (
+                <Pressable
+                  key={key}
+                  style={styles.cell}
+                  onPress={() => onSelectDay(date)}
+                  disabled={!group}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${date.toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}${group ? `, ${group.subs.length} renewal${group.subs.length === 1 ? '' : 's'}` : ''}`}
+                  accessibilityState={{ selected: isSelected, disabled: !group }}
                 >
-                  {date.getDate()}
-                </Text>
-                {group ? (
-                  <View style={styles.dotRow}>
-                    {group.subs.slice(0, 2).map((s) => (
-                      <View
-                        key={s.id}
-                        style={[styles.dot, isSelected && { backgroundColor: colors.white }]}
-                      />
-                    ))}
-                    {group.subs.length > 2 ? (
-                      <Text
-                        style={[styles.dotExtra, isSelected && { color: colors.white }]}
-                      >
-                        +{group.subs.length - 2}
-                      </Text>
+                  <View
+                    style={[
+                      styles.dayBox,
+                      isToday && styles.dayBoxToday,
+                      isSelected && styles.dayBoxSelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.dayText,
+                        isToday && styles.dayTextToday,
+                        isSelected && styles.dayTextSelected,
+                      ]}
+                    >
+                      {date.getDate()}
+                    </Text>
+                    {group ? (
+                      <View style={styles.dotRow}>
+                        {group.subs.slice(0, 2).map((s) => (
+                          <View
+                            key={s.id}
+                            style={[styles.dot, isSelected && { backgroundColor: colors.white }]}
+                          />
+                        ))}
+                        {group.subs.length > 2 ? (
+                          <Text style={[styles.dotExtra, isSelected && { color: colors.white }]}>
+                            +{group.subs.length - 2}
+                          </Text>
+                        ) : null}
+                      </View>
                     ) : null}
                   </View>
-                ) : null}
-              </View>
-            </Pressable>
-          );
-        })}
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
       </View>
     </View>
   );
 }
-
-const CELL = `${100 / 7}%` as const;
 
 const createStyles = (colors: Palette, t: TextStyles) =>
   StyleSheet.create({
@@ -108,19 +115,23 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       marginBottom: space.xs,
     },
     weekday: {
-      width: CELL,
+      flex: 1,
       textAlign: 'center',
       ...t.label,
       marginBottom: 0,
     },
     grid: {
+      gap: 4,
+    },
+    weekRow: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
     },
     cell: {
-      width: CELL,
+      flex: 1,
+      minWidth: 0,
+      minHeight: 44,
       alignItems: 'center',
-      paddingVertical: 3,
+      justifyContent: 'center',
     },
     dayBox: {
       width: 36,

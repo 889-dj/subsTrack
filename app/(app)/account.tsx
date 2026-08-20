@@ -3,6 +3,7 @@ import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'r
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AmountText } from '@/src/components/AmountText';
+import { Button } from '@/src/components/Button';
 import { Icon } from '@/src/components/Icon';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { SectionHeader } from '@/src/components/SectionHeader';
@@ -80,6 +81,9 @@ export default function AccountScreen() {
       {/* --- Membership card: identity + plan status fused into one instrument --- */}
       <Pressable
         onPress={handlePlanPress}
+        accessibilityRole="button"
+        accessibilityLabel={isPro ? 'Manage SubsTrack Pro' : 'SubsTrack Free plan'}
+        accessibilityHint={isPro ? 'Opens subscription management' : 'Opens available Pro plans'}
         style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       >
         <View style={styles.cardInner}>
@@ -129,6 +133,14 @@ export default function AccountScreen() {
           </View>
         </View>
       </Pressable>
+
+      {!isPro ? (
+        <Button
+          label="View Pro plans"
+          onPress={() => router.push('/paywall')}
+          style={styles.planButton}
+        />
+      ) : null}
 
       <SectionHeader label="Appearance" />
       <View style={styles.swatchRow}>
@@ -258,6 +270,9 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     },
     cardPressed: {
       opacity: 0.88,
+    },
+    planButton: {
+      marginTop: space.md,
     },
     cardInner: {
       borderRadius: radius.card,

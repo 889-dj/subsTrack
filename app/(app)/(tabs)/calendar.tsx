@@ -10,7 +10,7 @@ import { Icon } from '@/src/components/Icon';
 import { RenewalCalendar } from '@/src/components/RenewalCalendar';
 import { SectionHeader } from '@/src/components/SectionHeader';
 import { SkeletonList } from '@/src/components/SkeletonRow';
-import { UpcomingPayment } from '@/src/components/UpcomingPayment';
+import { SubscriptionCard } from '@/src/components/SubscriptionCard';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -39,9 +39,22 @@ export default function CalendarScreen() {
   const [selected, setSelected] = useState<Date | null>(null);
   const selectedKey = selected ? dayKey(selected) : null;
   const selectedGroup = selectedKey ? groupMap.get(selectedKey) : undefined;
+  const now = new Date();
+  const isCurrentMonth =
+    month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
+  const monthGroups = useMemo(
+    () =>
+      groups.filter(
+        (group) =>
+          group.date.getFullYear() === month.getFullYear() &&
+          group.date.getMonth() === month.getMonth(),
+      ),
+    [groups, month],
+  );
 
   function shiftMonth(delta: number) {
     setMonth((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
+    setSelected(null);
   }
 
   function goToday() {
@@ -62,19 +75,37 @@ export default function CalendarScreen() {
       onScroll={onScroll}
       scrollEventThrottle={16}
     >
+      <Text style={styles.eyebrow}>RENEWAL MAP</Text>
       <Text style={t.heading}>Calendar</Text>
       <Text style={styles.subtitle}>See every renewal at a glance</Text>
 
       <View style={styles.monthRow}>
         <Text style={styles.monthLabel}>{MONTH_LABEL(month)}</Text>
         <View style={styles.monthControls}>
-          <Pressable onPress={() => shiftMonth(-1)} hitSlop={8} style={styles.monthButton}>
+          <Pressable
+            onPress={() => shiftMonth(-1)}
+            style={styles.monthButton}
+            accessibilityRole="button"
+            accessibilityLabel="Previous month"
+          >
             <Icon name="chevron-back" size={16} color={colors.ink} />
           </Pressable>
-          <Pressable onPress={goToday} hitSlop={8} style={styles.todayButton}>
-            <Text style={styles.todayText}>Today</Text>
-          </Pressable>
-          <Pressable onPress={() => shiftMonth(1)} hitSlop={8} style={styles.monthButton}>
+          {!isCurrentMonth ? (
+            <Pressable
+              onPress={goToday}
+              style={styles.todayButton}
+              accessibilityRole="button"
+              accessibilityLabel="Return to current month"
+            >
+              <Text style={styles.todayText}>Today</Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            onPress={() => shiftMonth(1)}
+            style={styles.monthButton}
+            accessibilityRole="button"
+            accessibilityLabel="Next month"
+          >
             <Icon name="chevron-forward" size={16} color={colors.ink} />
           </Pressable>
         </View>
@@ -121,24 +152,26 @@ export default function CalendarScreen() {
           ) : null}
 
           <SectionHeader label="Upcoming" />
-          {groups.length === 0 ? (
+          {monthGroups.length === 0 ? (
             <EmptyState
-              title="Nothing on the calendar."
-              subtitle="Add a subscription to see its renewal here."
+              title={`Nothing renewing in ${month.toLocaleDateString('en-IN', { month: 'long' })}.`}
+              subtitle="Choose another month or add a subscription."
               icon="calendar-outline"
               action={{ label: 'Add a subscription', onPress: () => router.push('/add') }}
             />
           ) : (
-            groups.map((group) => (
-              <UpcomingPayment
-                key={group.dateKey}
-                subs={group.subs}
-                onPress={() => {
-                  setMonth(new Date(group.date.getFullYear(), group.date.getMonth(), 1));
-                  setSelected(group.date);
-                }}
-              />
-            ))
+            <View style={styles.upcomingList}>
+              {monthGroups.flatMap((group) =>
+                group.subs.map((sub) => (
+                  <SubscriptionCard
+                    key={sub.id}
+                    subscription={sub}
+                    variant="card"
+                    onPress={() => router.push(`/${sub.id}`)}
+                  />
+                )),
+              )}
+            </View>
           )}
         </>
       )}
@@ -161,6 +194,7 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       marginTop: 4,
       marginBottom: space.lg,
     },
+    eyebrow: { ...t.label, color: colors.indigo, marginBottom: 5 },
     monthRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -176,18 +210,20 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       gap: space.sm,
     },
     monthButton: {
-      width: 30,
-      height: 30,
-      borderRadius: 10,
+      width: 44,
+      height: 44,
+      borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.paper2,
     },
     todayButton: {
-      paddingHorizontal: space.sm,
-      paddingVertical: 6,
+      minHeight: 44,
+      paddingHorizontal: space.md,
       borderRadius: radius.chip,
       backgroundColor: colors.indigoBg,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     todayText: {
       ...t.caption,
@@ -228,5 +264,8 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     },
     dayRowPressed: {
       opacity: 0.7,
+    },
+    upcomingList: {
+      width: '100%',
     },
   });

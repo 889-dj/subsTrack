@@ -10,7 +10,7 @@ interface MoneyProps {
   /** Count up from zero on mount. Ignored when reduce-motion is on. */
   animate?: boolean;
   duration?: number;
-  tone?: 'ink' | 'saved';
+  tone?: 'ink' | 'saved' | 'hero';
   style?: TextStyle;
 }
 
@@ -70,13 +70,15 @@ export function Money({
 
   const base = size === 'hero' ? t.hero : t.total;
   const symbolSize = Math.round(base.fontSize * 0.65);
+  const color = tone === 'saved' ? colors.saved : tone === 'hero' ? colors.heroInk : colors.ink;
+  const symbolColor = tone === 'hero' ? colors.heroMuted : colors.muted;
 
   return (
     <Text
-      style={[base, tone === 'saved' && { color: colors.saved }, style]}
+      style={[base, { color }, style]}
       accessibilityLabel={`${currencySymbol(currency)}${Math.round(value)}`}
     >
-      <Text style={{ fontSize: symbolSize, color: colors.muted }}>{currencySymbol(currency)}</Text>
+      <Text style={{ fontSize: symbolSize, color: symbolColor }}>{currencySymbol(currency)}</Text>
       {Math.round(shown).toLocaleString('en-IN')}
     </Text>
   );

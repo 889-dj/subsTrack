@@ -10,10 +10,12 @@ import { shortDate } from '@/src/utils/subscriptions';
 interface SubscriptionCardProps {
   subscription: Subscription;
   onPress?: () => void;
+  /** `row` is the ledger list; `card` is the full-width calendar treatment. */
+  variant?: 'row' | 'card';
 }
 
 /** The primary list row on the Subscriptions tab — logo, name, cycle/category, amount + next date. */
-export function SubscriptionCard({ subscription, onPress }: SubscriptionCardProps) {
+export function SubscriptionCard({ subscription, onPress, variant = 'row' }: SubscriptionCardProps) {
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
 
@@ -23,7 +25,13 @@ export function SubscriptionCard({ subscription, onPress }: SubscriptionCardProp
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.card,
+        variant === 'card' && styles.cardBoxed,
+        pressed && styles.pressed,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`${subscription.name}, ${subscription.cost} ${subscription.currency}, renews ${shortDate(subscription.nextRenewalDate)}`}
     >
       <SubscriptionIcon name={subscription.name} size={44} />
       <View style={styles.copy}>
@@ -48,16 +56,22 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: space.md,
+      paddingVertical: space.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.hairline,
+    },
+    cardBoxed: {
+      width: '100%',
       backgroundColor: colors.surface,
-      borderRadius: radius.cardSm,
       borderWidth: 1,
       borderColor: colors.hairline,
-      padding: space.md,
+      borderRadius: radius.cardSm,
+      paddingHorizontal: space.lg,
+      paddingVertical: space.lg,
       marginBottom: space.sm,
     },
     pressed: {
-      opacity: 0.85,
-      transform: [{ scale: 0.98 }],
+      opacity: 0.62,
     },
     copy: {
       flex: 1,
@@ -65,7 +79,7 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     },
     name: {
       ...t.body,
-      fontFamily: font.sansMed,
+      fontFamily: font.sansSemi,
     },
     subtitle: {
       ...t.caption,

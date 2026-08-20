@@ -17,6 +17,10 @@ export interface Palette {
   surface: string;
   /** One step up from `surface` — modals, raised rows, the hero card. */
   elevated: string;
+  /** Brand ink block used for the single primary data surface. */
+  heroSurface: string;
+  heroInk: string;
+  heroMuted: string;
   ink: string;
   /** Secondary text. */
   muted: string;
@@ -42,22 +46,25 @@ export interface Palette {
 }
 
 export const lightColors: Palette = {
-  paper: '#F2F3F0', // cool recycled-statement grey-white, app background
-  paper2: '#ECEDE9',
-  surface: '#FFFFFF', // cards
+  paper: '#F7F8FA',
+  paper2: '#EEF0F4',
+  surface: '#FFFFFF',
   elevated: '#FFFFFF',
-  ink: '#16181A', // primary text
-  muted: '#6B6F76', // labels, secondary
-  faint: '#9A9DA4',
-  hairline: '#DEDFDA', // 1px rules, borders
-  indigo: '#2A2F6B', // brand — stamp ink. Buttons, active states, brand marks
-  indigoBg: '#E7E8F0', // indigo tint for chips/badges
-  cyan: '#0E7C86',
-  pink: '#A23A63',
-  debit: '#B23A2F',
-  saved: '#2F6B4F',
-  savedBg: '#E4EDE8',
-  warning: '#8A5A12',
+  heroSurface: '#18214A',
+  heroInk: '#FFFFFF',
+  heroMuted: '#B9C2EA',
+  ink: '#171A24',
+  muted: '#5D6472',
+  faint: '#69717F',
+  hairline: '#E6E8ED',
+  indigo: '#4457E6',
+  indigoBg: '#E9ECFF',
+  cyan: '#087F8C',
+  pink: '#D14D72',
+  debit: '#C0443D',
+  saved: '#207A55',
+  savedBg: '#E2F2EA',
+  warning: '#9A650B',
   white: '#FFFFFF',
   isDark: false,
 };
@@ -72,12 +79,15 @@ export const darkColors: Palette = {
   paper2: '#0D0F14', // background secondary
   surface: '#12151B', // card
   elevated: '#171A21', // elevated card / hero / modals
+  heroSurface: '#5367F5',
+  heroInk: '#FFFFFF',
+  heroMuted: '#DCE1FF',
   ink: '#F5F7FA', // text primary
   muted: '#9299A8', // text secondary
-  faint: '#5E6573', // text muted
+  faint: '#828A9B', // tertiary text, kept above WCAG AA on the dark background
   hairline: 'rgba(255,255,255,0.07)', // border
-  indigo: '#8B5CF6', // primary accent — electric violet
-  indigoBg: 'rgba(139,92,246,0.14)',
+  indigo: '#8FA0FF',
+  indigoBg: 'rgba(143,160,255,0.14)',
   cyan: '#5EE7FF', // secondary accent
   pink: '#FF5CAA', // tertiary accent
   debit: '#FF6B7A', // danger
@@ -121,9 +131,9 @@ export function createTextStyles(colors: Palette) {
     /** The reveal number, 32-44px range for hero cards. */
     hero: {
       fontFamily: font.monoMed,
-      fontSize: 42,
-      lineHeight: 46,
-      letterSpacing: -1.2,
+      fontSize: 44,
+      lineHeight: 48,
+      letterSpacing: -1.6,
       color: colors.ink,
       ...tabular,
     },
@@ -139,9 +149,9 @@ export function createTextStyles(colors: Palette) {
     /** Page heading — understated, not shouty. Screen titles, greetings. */
     heading: {
       fontFamily: font.sansMed,
-      fontSize: 19,
-      lineHeight: 24,
-      letterSpacing: -0.2,
+      fontSize: 28,
+      lineHeight: 34,
+      letterSpacing: -0.7,
       color: colors.ink,
     },
     /** Section heading, one step under `heading`. */
@@ -177,7 +187,7 @@ export type TextStyles = ReturnType<typeof createTextStyles>;
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, huge: 48 };
 
-export const radius = { card: 20, cardSm: 15, chip: 999, sheet: 24 };
+export const radius = { card: 18, cardSm: 12, chip: 999, sheet: 22 };
 
 /** Screen horizontal padding. The same everywhere, no exceptions. */
 export const gutter = 20;

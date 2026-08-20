@@ -96,6 +96,7 @@ export default function InsightsScreen() {
       onScroll={onScroll}
       scrollEventThrottle={16}
     >
+      <Text style={styles.eyebrow}>SPEND SIGNALS</Text>
       <Text style={t.heading}>Insights</Text>
       <Text style={styles.subtitle}>Understand your recurring spending</Text>
 
@@ -151,6 +152,7 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       marginTop: 4,
       marginBottom: space.lg,
     },
+    eyebrow: { ...t.label, color: colors.indigo, marginBottom: 5 },
     heroCard: {
       backgroundColor: colors.elevated,
       borderRadius: radius.card,

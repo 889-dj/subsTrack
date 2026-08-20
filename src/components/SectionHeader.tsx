@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/src/hooks/useTheme';
-import { space, type Palette } from '@/src/theme';
+import { font, space, type Palette } from '@/src/theme';
 
 interface SectionHeaderProps {
   label: string;
@@ -16,7 +16,7 @@ export function SectionHeader({ label, trailing }: SectionHeaderProps) {
 
   return (
     <View style={styles.wrap}>
-      <Text style={t.label}>{label}</Text>
+      <Text style={styles.label}>{label}</Text>
       {trailing}
     </View>
   );
@@ -28,9 +28,8 @@ const createStyles = (colors: Palette) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingBottom: space.sm,
-      marginTop: space.xl,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.hairline,
+      marginTop: space.xxl,
+      marginBottom: space.md,
     },
+    label: { fontFamily: font.sansSemi, fontSize: 17, lineHeight: 22, color: colors.ink, letterSpacing: -0.25 },
   });

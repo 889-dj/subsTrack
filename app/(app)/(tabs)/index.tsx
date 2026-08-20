@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { EmptyState } from '@/src/components/EmptyState';
-import { Icon } from '@/src/components/Icon';
 import { Logo } from '@/src/components/Logo';
 import { MultiRenewalSheet } from '@/src/components/MultiRenewalSheet';
 import { SectionHeader } from '@/src/components/SectionHeader';
@@ -88,16 +87,16 @@ export default function OverviewScreen() {
     >
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={t.heading} numberOfLines={1}>
-            {greeting()}, {name}
-          </Text>
-          <Text style={styles.subtitle}>Your subscriptions at a glance</Text>
+          <Text style={styles.eyebrow}>{greeting()}</Text>
+          <Text style={t.heading} numberOfLines={1}>{name}'s overview</Text>
         </View>
         <View style={styles.headerActions}>
-          <Pressable hitSlop={10} style={styles.iconButton}>
-            <Icon name="notifications-outline" size={20} color={colors.ink} />
-          </Pressable>
-          <Pressable hitSlop={10} onPress={() => router.push('/account')}>
+          <Pressable
+            hitSlop={10}
+            onPress={() => router.push('/account')}
+            accessibilityRole="button"
+            accessibilityLabel="Open settings and Pro plans"
+          >
             <Logo name={user?.email || '?'} size={36} />
           </Pressable>
         </View>
@@ -213,18 +212,11 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       ...t.caption,
       marginTop: 4,
     },
+    eyebrow: { ...t.label, color: colors.indigo, marginBottom: 5 },
     headerActions: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: space.md,
-    },
-    iconButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.paper2,
     },
     error: {
       ...t.caption,

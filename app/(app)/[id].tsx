@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { RingChart } from 'panelui-native';
 import { AmountText } from '@/src/components/AmountText';
 import { Button } from '@/src/components/Button';
 import { CategoryChip } from '@/src/components/CategoryChip';
@@ -11,10 +10,9 @@ import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { SectionHeader } from '@/src/components/SectionHeader';
 import { SkeletonList } from '@/src/components/SkeletonRow';
 import { SubscriptionIcon } from '@/src/components/SubscriptionIcon';
-import { useDeleteSubscription, useSubscription, useSubscriptions } from '@/src/hooks/useSubscriptions';
+import { useDeleteSubscription, useSubscription } from '@/src/hooks/useSubscriptions';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
-import { monthlyCost, monthlyTotal } from '@/src/utils/money';
 import { longDate, synthesizePaymentHistory } from '@/src/utils/subscriptions';
 
 const formatDate = longDate;
@@ -26,7 +24,6 @@ export default function DetailScreen() {
   const id = typeof params.id === 'string' ? params.id : undefined;
   const router = useRouter();
   const { data: subscription, isLoading, isError } = useSubscription(id);
-  const { data: allSubs } = useSubscriptions();
   const deleteMutation = useDeleteSubscription();
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
@@ -70,9 +67,6 @@ export default function DetailScreen() {
     );
   }
 
-  const itemMonthly = monthlyCost(subscription);
-  const wholeMonthly = monthlyTotal(allSubs ?? []) || itemMonthly;
-  const sharePercent = wholeMonthly > 0 ? Math.round((itemMonthly / wholeMonthly) * 100) : 0;
   const history = synthesizePaymentHistory(subscription);
 
   return (
@@ -98,35 +92,6 @@ export default function DetailScreen() {
             <CategoryChip label={subscription.category ?? 'Other'} />
             {subscription.plan ? <CategoryChip label={subscription.plan} /> : null}
             {subscription.source ? <CategoryChip label={subscription.source} /> : null}
-          </View>
-        </View>
-
-        <View style={styles.ringCard}>
-          <RingChart
-            data={[{ label: subscription.name, value: itemMonthly, maxValue: wholeMonthly }]}
-            size={116}
-            strokeWidth={10}
-          >
-            <RingChart.Ring index={0} colorIndex={1} />
-            <RingChart.Center
-              formatValue={() => `${sharePercent}%`}
-              defaultLabel="of monthly spend"
-            />
-          </RingChart>
-          <View style={styles.ringCopy}>
-            <Text style={t.label}>Per month</Text>
-            <AmountText
-              value={itemMonthly}
-              currency={subscription.currency}
-              round={false}
-              size={26}
-              style={styles.ringAmount}
-            />
-            <Text style={styles.ringSub}>
-              {subscription.billingCycle === 'yearly'
-                ? `Billed ${subscription.currency} ${Math.round(subscription.cost).toLocaleString('en-IN')} once a year`
-                : 'Billed monthly'}
-            </Text>
           </View>
         </View>
 
@@ -236,33 +201,12 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       flexWrap: 'wrap',
       justifyContent: 'center',
     },
-    ringCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: space.lg,
-      backgroundColor: colors.elevated,
-      borderRadius: radius.card,
-      borderWidth: 1,
-      borderColor: colors.hairline,
-      padding: space.lg,
-    },
-    ringCopy: {
-      flex: 1,
-      gap: 2,
-    },
-    ringAmount: {
-      marginTop: 2,
-    },
-    ringSub: {
-      ...t.caption,
-      marginTop: space.xs,
-    },
     tabSwitch: {
       flexDirection: 'row',
       backgroundColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.paper2,
       borderRadius: radius.cardSm,
       padding: 3,
-      marginTop: space.xl,
+      marginTop: space.md,
       marginBottom: space.sm,
     },
     tabItem: {

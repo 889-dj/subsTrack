@@ -57,9 +57,7 @@ export default function SubscriptionsScreen() {
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.indigo} />
         }
       >
-        <View style={styles.header}>
-          <Text style={t.heading}>Subscriptions</Text>
-        </View>
+        <View style={styles.header}><Text style={styles.eyebrow}>YOUR LEDGER</Text><Text style={t.heading}>Subscriptions</Text></View>
         <View style={styles.statsRow}>
           <Text style={styles.statText}>{subs.length} active</Text>
           <Text style={styles.statDot}>·</Text>
@@ -122,6 +120,7 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     header: {
       marginBottom: space.xs,
     },
+    eyebrow: { ...t.label, color: colors.indigo, marginBottom: 5 },
     statsRow: {
       flexDirection: 'row',
       alignItems: 'center',

@@ -13,7 +13,7 @@ interface UpcomingPaymentProps {
   onPress?: () => void;
 }
 
-const CARD_WIDTH = 148;
+const CARD_WIDTH = 164;
 
 /**
  * A single card for one renewal day, sized for a horizontal carousel. When
@@ -72,10 +72,10 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     card: {
       width: CARD_WIDTH,
       backgroundColor: colors.surface,
-      borderRadius: radius.card,
+      borderRadius: radius.cardSm,
       borderWidth: 1,
       borderColor: colors.hairline,
-      padding: space.md,
+      padding: space.lg,
       gap: 4,
     },
     pressed: {
@@ -115,10 +115,7 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       fontSize: 11.5,
     },
     amountRow: {
-      marginTop: space.sm,
-      paddingTop: space.sm,
-      borderTopWidth: 1,
-      borderTopColor: colors.hairline,
+      marginTop: space.lg,
     },
   });
 

@@ -36,7 +36,7 @@ export function ScreenHeader({
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel={dismiss === 'close' ? 'Close' : 'Back'}
-            style={({ pressed }) => pressed && styles.pressed}
+            style={({ pressed }) => [styles.dismissButton, pressed && styles.pressed]}
           >
             <Icon
               name={dismiss === 'close' ? 'close' : 'arrow-back'}
@@ -79,6 +79,13 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     },
     spacer: {
       flex: 1,
+    },
+    dismissButton: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: -space.sm,
     },
     caption: {
       ...t.caption,
