@@ -39,6 +39,9 @@ export default function CalendarScreen() {
   const [selected, setSelected] = useState<Date | null>(null);
   const selectedKey = selected ? dayKey(selected) : null;
   const selectedGroup = selectedKey ? groupMap.get(selectedKey) : undefined;
+  const selectedGroupHasMixedCurrencies = selectedGroup
+    ? new Set(selectedGroup.subs.map((sub) => sub.currency)).size > 1
+    : false;
   const monthGroups = useMemo(
     () =>
       groups.filter(
@@ -109,18 +112,24 @@ export default function CalendarScreen() {
               <Text style={styles.dayPanelTitle}>{longDate(selected.toISOString())}</Text>
               <Text style={styles.dayPanelSubtitle}>
                 {selectedGroup.subs.length} subscription{selectedGroup.subs.length === 1 ? '' : 's'} ·{' '}
-                <AmountText
-                  value={selectedGroup.total}
-                  currency={selectedGroup.subs[0].currency}
-                  size={13}
-                  tone="muted"
-                />
+                {selectedGroupHasMixedCurrencies ? (
+                  'multiple currencies'
+                ) : (
+                  <AmountText
+                    value={selectedGroup.total}
+                    currency={selectedGroup.subs[0].currency}
+                    size={13}
+                    tone="muted"
+                  />
+                )}
               </Text>
               {selectedGroup.subs.map((sub) => (
                 <Pressable
                   key={sub.id}
                   style={({ pressed }) => [styles.dayRow, pressed && styles.dayRowPressed]}
                   onPress={() => router.push(`/${sub.id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${sub.name}, ${sub.cost} ${sub.currency}`}
                 >
                   <Text style={t.body} numberOfLines={1}>
                     {sub.name}

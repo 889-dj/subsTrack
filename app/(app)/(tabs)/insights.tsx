@@ -14,7 +14,12 @@ import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
 import { gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
-import { monthlyCost, monthlyTotal } from '@/src/utils/money';
+import {
+  formatCompactMoney,
+  monthlyCost,
+  monthlyTotal,
+  scopeSubscriptionsByCurrency,
+} from '@/src/utils/money';
 import { spendByCategory, upcoming } from '@/src/utils/subscriptions';
 
 type Accent = 'indigo' | 'cyan' | 'pink' | 'warning' | 'saved';
@@ -27,10 +32,12 @@ export default function InsightsScreen() {
   const { onScroll } = useTabBarScroll();
 
   const subs = useMemo(() => data ?? [], [data]);
-  const monthly = useMemo(() => monthlyTotal(subs), [subs]);
+  const currencyScope = useMemo(() => scopeSubscriptionsByCurrency(subs), [subs]);
+  const scopedSubs = currencyScope.included;
+  const monthly = useMemo(() => monthlyTotal(scopedSubs), [scopedSubs]);
   const yearly = monthly * 12;
-  const currency = subs[0]?.currency ?? 'INR';
-  const byCategory = useMemo(() => spendByCategory(subs), [subs]);
+  const currency = currencyScope.currency;
+  const byCategory = useMemo(() => spendByCategory(scopedSubs), [scopedSubs]);
 
   const insights = useMemo(() => {
     if (subs.length === 0) return [];
@@ -48,7 +55,7 @@ export default function InsightsScreen() {
       });
     }
 
-    const biggest = [...subs].sort((a, b) => monthlyCost(b) - monthlyCost(a))[0];
+    const biggest = [...scopedSubs].sort((a, b) => monthlyCost(b) - monthlyCost(a))[0];
     if (biggest && monthly > 0) {
       const share = Math.round((monthlyCost(biggest) / monthly) * 100);
       list.push({
@@ -64,13 +71,14 @@ export default function InsightsScreen() {
         icon: 'pie-chart',
         title: 'Top category',
         accent: 'cyan',
-        body: `${byCategory[0].category} is your largest category at ${currency} ${Math.round(
-          byCategory[0].amount
-        ).toLocaleString('en-IN')} a year.`,
+        body: `${byCategory[0].category} is your largest category at ${formatCompactMoney(
+          byCategory[0].amount,
+          currency,
+        )} a year.`,
       });
     }
 
-    const yearlyBilled = subs.filter((s) => s.billingCycle === 'yearly');
+    const yearlyBilled = scopedSubs.filter((s) => s.billingCycle === 'yearly');
     if (yearlyBilled.length > 0) {
       list.push({
         icon: 'calendar-outline',
@@ -83,7 +91,7 @@ export default function InsightsScreen() {
     }
 
     return list;
-  }, [subs, monthly, byCategory, currency]);
+  }, [subs, scopedSubs, monthly, byCategory, currency]);
 
   return (
     <Animated.ScrollView
@@ -111,13 +119,22 @@ export default function InsightsScreen() {
       ) : (
         <>
           <View style={styles.heroCard}>
-            <Text style={styles.heroLine}>
-              You spend <Money value={yearly} currency={currency} size="total" style={styles.heroInline} />{' '}
-              per year on subscriptions
-            </Text>
+            <Text style={styles.heroKicker}>ANNUAL RUN RATE</Text>
+            <View style={styles.heroAmountRow}>
+              <Money value={yearly} currency={currency} size="total" />
+              <Text style={styles.heroPeriod}>/year</Text>
+            </View>
             <Text style={styles.heroSub}>
-              That's {currency} {Math.round(monthly).toLocaleString('en-IN')} every month
+              {formatCompactMoney(monthly, currency)} each month across {scopedSubs.length}{' '}
+              {currency} subscription{scopedSubs.length === 1 ? '' : 's'}.
             </Text>
+            {currencyScope.excludedCount > 0 ? (
+              <Text style={styles.heroScope}>
+                {currencyScope.excludedCount} subscription
+                {currencyScope.excludedCount === 1 ? '' : 's'} in{' '}
+                {currencyScope.excludedCurrencies.join(', ')} excluded from this total.
+              </Text>
+            ) : null}
           </View>
 
           <SectionHeader label="By category" />
@@ -158,19 +175,31 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       borderRadius: radius.card,
       borderWidth: 1,
       borderColor: colors.hairline,
-      padding: space.xl,
+      padding: space.lg,
     },
-    heroLine: {
-      ...t.title,
-      fontSize: 21,
-      lineHeight: 30,
+    heroKicker: {
+      ...t.label,
+      color: colors.indigo,
     },
-    heroInline: {
-      fontSize: 21,
-      lineHeight: 30,
+    heroAmountRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      marginTop: space.sm,
+    },
+    heroPeriod: {
+      ...t.caption,
+      marginLeft: space.xs,
     },
     heroSub: {
       ...t.caption,
       marginTop: space.sm,
+    },
+    heroScope: {
+      ...t.caption,
+      marginTop: space.sm,
+      paddingTop: space.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.hairline,
+      fontSize: 12,
     },
   });

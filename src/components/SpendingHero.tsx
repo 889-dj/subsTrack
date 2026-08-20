@@ -9,6 +9,7 @@ interface SpendingHeroProps {
   yearly: number;
   currency: string;
   activeCount: number;
+  scopeNote?: string;
   /** Illustrative month-over-month delta, e.g. 8.4. Omit to hide the pill. */
   deltaPercent?: number;
 }
@@ -18,6 +19,7 @@ export function SpendingHero({
   yearly,
   currency,
   activeCount,
+  scopeNote,
   deltaPercent,
 }: SpendingHeroProps) {
   const { colors, text: t } = useTheme();
@@ -27,22 +29,22 @@ export function SpendingHero({
     <View style={styles.wrap}>
       <View style={styles.card}>
         <View style={styles.kickerRow}>
-          <Text style={styles.kicker}>CURRENT STATEMENT</Text>
-          <View style={styles.live}><View style={styles.liveDot} /><Text style={styles.liveText}>LIVE</Text></View>
+          <Text style={styles.kicker}>MONTHLY COMMITMENT</Text>
+          <Text style={styles.currency}>{currency}</Text>
         </View>
         <View style={styles.numberRow}>
-          <Text style={styles.overline}>Recurring each month</Text>
+          <Text style={styles.overline}>Recurring spend</Text>
           <Money value={monthly} currency={currency} size="hero" tone="hero" animate />
         </View>
         <View style={styles.ledgerRow}>
           <View style={styles.metric}>
             <Text style={styles.metricValue}>{activeCount}</Text>
-            <Text style={styles.metricLabel}>ACTIVE</Text>
+            <Text style={styles.metricLabel}>TRACKED</Text>
           </View>
           <View style={styles.rule} />
           <View style={styles.metricWide}>
             <Text style={styles.metricValue}>{currency} {Math.round(yearly).toLocaleString('en-IN')}</Text>
-            <Text style={styles.metricLabel}>YEARLY RUN RATE</Text>
+            <Text style={styles.metricLabel}>12-MONTH TOTAL</Text>
           </View>
           {typeof deltaPercent === 'number' ? <>
             <View style={styles.rule} />
@@ -52,6 +54,7 @@ export function SpendingHero({
             </View>
           </> : null}
         </View>
+        {scopeNote ? <Text style={styles.scopeNote}>{scopeNote}</Text> : null}
       </View>
     </View>
   );
@@ -70,9 +73,12 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     },
     kickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     kicker: { ...t.label, color: colors.heroMuted, letterSpacing: 1.2 },
-    live: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.savedBg },
-    liveText: { fontFamily: font.monoMed, fontSize: 10, color: colors.heroMuted, letterSpacing: 1 },
+    currency: {
+      fontFamily: font.monoMed,
+      fontSize: 10,
+      color: colors.heroMuted,
+      letterSpacing: 1,
+    },
     overline: { ...t.caption, color: colors.heroMuted },
     numberRow: {
       marginTop: space.xl,
@@ -91,4 +97,11 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     metricValue: { fontFamily: font.monoMed, fontSize: 13, color: colors.heroInk },
     metricLabel: { fontFamily: font.mono, fontSize: 8.5, color: colors.heroMuted, letterSpacing: 0.7, marginTop: 4 },
     rule: { width: 1, backgroundColor: 'rgba(255,255,255,0.16)', marginHorizontal: space.md },
+    scopeNote: {
+      marginTop: space.md,
+      fontFamily: font.sans,
+      fontSize: 11,
+      lineHeight: 15,
+      color: colors.heroMuted,
+    },
   });

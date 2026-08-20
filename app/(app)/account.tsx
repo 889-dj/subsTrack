@@ -3,30 +3,23 @@ import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'r
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AmountText } from '@/src/components/AmountText';
-import { Button } from '@/src/components/Button';
-import { Icon } from '@/src/components/Icon';
+import { Icon, type IconName } from '@/src/components/Icon';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
-import { SectionHeader } from '@/src/components/SectionHeader';
 import { useAuth } from '@/src/hooks/useAuth';
 import { usePurchases } from '@/src/hooks/usePurchases';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { useTheme, type ThemeModePreference } from '@/src/hooks/useTheme';
-import {
-  darkColors,
-  font,
-  gutter,
-  lightColors,
-  radius,
-  space,
-  type Palette,
-  type TextStyles,
-} from '@/src/theme';
-import { monthlyTotal } from '@/src/utils/money';
+import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
+import { monthlyTotal, scopeSubscriptionsByCurrency } from '@/src/utils/money';
 
-const APPEARANCE_OPTIONS: { value: ThemeModePreference; label: string }[] = [
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-  { value: 'system', label: 'Auto' },
+const APPEARANCE_OPTIONS: {
+  value: ThemeModePreference;
+  label: string;
+  icon: IconName;
+}[] = [
+  { value: 'light', label: 'Light', icon: 'sun' },
+  { value: 'dark', label: 'Dark', icon: 'moon' },
+  { value: 'system', label: 'Auto', icon: 'system' },
 ];
 
 export default function AccountScreen() {
@@ -40,20 +33,18 @@ export default function AccountScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const subs = useMemo(() => subscriptions ?? [], [subscriptions]);
-
+  const currencyScope = useMemo(() => scopeSubscriptionsByCurrency(subs), [subs]);
   const stats = useMemo(() => {
-    const monthly = monthlyTotal(subs);
+    const monthly = monthlyTotal(currencyScope.included);
     return { total: subs.length, monthly, yearly: monthly * 12 };
-  }, [subs]);
+  }, [subs.length, currencyScope.included]);
 
-  const currency = subs[0]?.currency ?? 'INR';
-  // A session restored from a stored token has no profile until the API returns
-  // one, so the email can legitimately be empty here.
+  const currency = currencyScope.currency;
   const email = user?.email?.trim();
-  const initial = (email?.trim()[0] ?? '?').toUpperCase();
+  const initial = email?.[0]?.toUpperCase();
 
   function handleLogout() {
-    Alert.alert('Log out?', "You'll need to sign in again to see your mandates.", [
+    Alert.alert('Log out?', "You'll need to sign in again to see your subscriptions.", [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Log out', style: 'destructive', onPress: () => logout() },
     ]);
@@ -95,200 +86,185 @@ export default function AccountScreen() {
       style={styles.screen}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: insets.top + space.sm, paddingBottom: space.xxl },
+        { paddingTop: insets.top + space.sm, paddingBottom: insets.bottom + space.xxl },
       ]}
       showsVerticalScrollIndicator={false}
     >
       <ScreenHeader
-        title="Settings"
-        caption="Your identity, plan, and how the ledger looks."
+        title="Account"
+        caption="Plan, appearance, and account controls."
         dismiss="back"
       />
 
-      {/* --- Membership card: identity + plan status fused into one instrument --- */}
       <Pressable
         onPress={handlePlanPress}
         accessibilityRole="button"
-        accessibilityLabel={isPro ? 'Manage SubsTrack Pro' : 'SubsTrack Free plan'}
+        accessibilityLabel={isPro ? 'Manage SubsTrack Pro' : 'Explore SubsTrack Pro'}
         accessibilityHint={isPro ? 'Opens subscription management' : 'Opens available Pro plans'}
-        style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+        style={({ pressed }) => [styles.pass, pressed && styles.pressed]}
       >
-        <View style={styles.cardInner}>
-          <View style={styles.cardTop}>
-            <View style={styles.avatarRing}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarInitial}>{initial}</Text>
-              </View>
-            </View>
-
-            <View style={styles.cardIdentity}>
-              <Text style={styles.email} numberOfLines={1}>
-                {email || 'Signed in'}
-              </Text>
-              <Text style={styles.tracked}>
-                {stats.total} {stats.total === 1 ? 'mandate' : 'mandates'} tracked
-              </Text>
-            </View>
-
-            <View style={[styles.tierBadge, isPro && styles.tierBadgePro]}>
-              <Text style={[styles.tierBadgeText, isPro && styles.tierBadgeTextPro]}>
-                {isPro ? 'PRO' : 'FREE'}
-              </Text>
-            </View>
+        <View style={styles.identityRow}>
+          <View style={styles.avatar}>
+            {initial ? (
+              <Text style={styles.avatarInitial}>{initial}</Text>
+            ) : (
+              <Icon name="user" size={23} color={colors.heroInk} strokeWidth={1.7} />
+            )}
           </View>
 
-          <View style={styles.cardRule} />
+          <View style={styles.identityCopy}>
+            <Text style={styles.identityTitle} numberOfLines={1}>
+              {email || 'Your account'}
+            </Text>
+            <Text style={styles.identityCaption}>
+              {stats.total} active {stats.total === 1 ? 'subscription' : 'subscriptions'}
+            </Text>
+          </View>
 
-          <View style={styles.cardFooter}>
-            {isPro ? (
-              <>
-                <Icon name="checkmark-circle" size={15} color={colors.saved} />
-                <Text style={styles.cardFooterText}>Active — tap to manage</Text>
-              </>
-            ) : (
-              <>
-                <Icon name="flash" size={15} color={colors.cyan} />
-                <Text style={styles.cardFooterText}>Unlock price alerts &amp; exports</Text>
-              </>
-            )}
-            <Icon
-              name="chevron-forward"
-              size={15}
-              color={colors.faint}
-              style={styles.cardChevron}
+          <View style={styles.planBadge}>
+            <Text style={styles.planBadgeText}>{isPro ? 'PRO' : 'FREE'}</Text>
+          </View>
+        </View>
+
+        <View style={styles.passRule} />
+
+        <View style={styles.spendingRow}>
+          <View style={styles.spendingItem}>
+            <Text style={styles.passLabel}>MONTHLY</Text>
+            <AmountText
+              value={stats.monthly}
+              currency={currency}
+              size={23}
+              tone="hero"
+              numberOfLines={1}
+            />
+          </View>
+          <View style={styles.spendingDivider} />
+          <View style={styles.spendingItem}>
+            <Text style={styles.passLabel}>YEARLY</Text>
+            <AmountText
+              value={stats.yearly}
+              currency={currency}
+              size={23}
+              tone="hero"
+              numberOfLines={1}
             />
           </View>
         </View>
+
+        {currencyScope.excludedCount > 0 ? (
+          <Text style={styles.passScope}>
+            {currency} totals · {currencyScope.excludedCount} in{' '}
+            {currencyScope.excludedCurrencies.join(', ')} shown separately
+          </Text>
+        ) : null}
+
+        <View style={styles.planAction}>
+          <Icon
+            name={isPro ? 'checkmark-circle' : 'flash'}
+            size={16}
+            color={colors.heroInk}
+          />
+          <Text style={styles.planActionText}>{isPro ? 'Manage plan' : 'Explore Pro'}</Text>
+          <Icon name="chevron-forward" size={16} color={colors.heroInk} />
+        </View>
       </Pressable>
 
-      {!isPro ? (
-        <Button
-          label="View Pro plans"
-          onPress={() => router.push('/paywall')}
-          style={styles.planButton}
-        />
-      ) : null}
-
-      <SectionHeader label="Appearance" />
-      <View style={styles.swatchRow}>
-        {APPEARANCE_OPTIONS.map((opt) => {
-          const active = mode === opt.value;
+      <Text style={styles.sectionTitle}>Appearance</Text>
+      <View style={styles.appearanceControl} accessibilityRole="radiogroup">
+        {APPEARANCE_OPTIONS.map((option) => {
+          const active = mode === option.value;
           return (
             <Pressable
-              key={opt.value}
-              onPress={() => setMode(opt.value)}
-              style={styles.swatchSlot}
-              accessibilityRole="button"
-              accessibilityLabel={`${opt.label} appearance`}
-              accessibilityState={{ selected: active }}
+              key={option.value}
+              onPress={() => setMode(option.value)}
+              accessibilityRole="radio"
+              accessibilityLabel={`${option.label} appearance`}
+              accessibilityState={{ checked: active }}
+              style={({ pressed }) => [
+                styles.appearanceOption,
+                active && styles.appearanceOptionActive,
+                pressed && styles.pressed,
+              ]}
             >
-              <View style={[styles.swatchFrame, active && styles.swatchFrameActive]}>
-                <ThemeSwatchPreview mode={opt.value} />
-              </View>
-              <Text style={[styles.swatchLabel, active && styles.swatchLabelActive]}>
-                {opt.label}
+              <Icon
+                name={option.icon}
+                size={18}
+                color={active ? colors.indigo : colors.faint}
+              />
+              <Text style={[styles.appearanceLabel, active && styles.appearanceLabelActive]}>
+                {option.label}
               </Text>
             </Pressable>
           );
         })}
       </View>
 
-      <SectionHeader label="Spending" />
-      <View style={styles.statTile}>
-        <View style={styles.statHalf}>
-          <Text style={t.label}>Per month</Text>
-          <AmountText value={stats.monthly} currency={currency} size={26} style={styles.statValue} />
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statHalf}>
-          <Text style={t.label}>Per year</Text>
-          <AmountText value={stats.yearly} currency={currency} size={26} style={styles.statValue} />
-        </View>
+      <Text style={styles.sectionTitle}>Account</Text>
+      <View style={styles.actionGroup}>
+        <SettingsRow
+          icon="logout"
+          label="Log out"
+          onPress={handleLogout}
+          disabled={isDeleting}
+          colors={colors}
+          styles={styles}
+        />
+        <View style={styles.actionRule} />
+        <SettingsRow
+          icon="delete"
+          label={isDeleting ? 'Deleting account…' : 'Delete account'}
+          onPress={handleDeleteAccount}
+          disabled={isDeleting}
+          danger
+          colors={colors}
+          styles={styles}
+        />
       </View>
 
-      <View style={styles.footer}>
-        <Pressable onPress={handleLogout} hitSlop={8} disabled={isDeleting}>
-          <Text style={styles.logout}>Log out</Text>
-        </Pressable>
-        <Pressable
-          onPress={handleDeleteAccount}
-          hitSlop={8}
-          disabled={isDeleting}
-          accessibilityRole="button"
-          accessibilityLabel="Delete account permanently"
-        >
-          <Text style={[styles.deleteAccount, isDeleting && styles.actionDisabled]}>
-            {isDeleting ? 'Deleting account…' : 'Delete account'}
-          </Text>
-        </Pressable>
-        <Text style={styles.version}>subsTrack · 1.0.0</Text>
-      </View>
+      <Text style={styles.version}>subsTrack · 1.0.0</Text>
     </ScrollView>
   );
 }
 
-/** A live, tiny render of what each appearance mode actually looks like — not a text label pretending to be one. */
-function ThemeSwatchPreview({ mode }: { mode: ThemeModePreference }) {
-  if (mode === 'system') {
-    return (
-      <View style={[StyleSheet.absoluteFill, swatchStyles.split]}>
-        <View style={[swatchStyles.splitHalf, { backgroundColor: lightColors.paper }]}>
-          <View style={[swatchStyles.dot, { backgroundColor: lightColors.indigo }]} />
-        </View>
-        <View style={[swatchStyles.splitHalf, { backgroundColor: darkColors.paper }]}>
-          <View style={[swatchStyles.line, { backgroundColor: darkColors.ink }]} />
-        </View>
-      </View>
-    );
-  }
-  const p = mode === 'light' ? lightColors : darkColors;
+function SettingsRow({
+  icon,
+  label,
+  onPress,
+  disabled,
+  danger = false,
+  colors,
+  styles,
+}: {
+  icon: IconName;
+  label: string;
+  onPress: () => void;
+  disabled: boolean;
+  danger?: boolean;
+  colors: Palette;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  const tint = danger ? colors.debit : colors.ink;
   return (
-    <View style={[StyleSheet.absoluteFill, { backgroundColor: p.paper }]}>
-      <View style={swatchStyles.content}>
-        <View style={[swatchStyles.chip, { backgroundColor: p.surface, borderColor: p.hairline }]}>
-          <View style={[swatchStyles.dot, { backgroundColor: p.indigo }]} />
-        </View>
-        <View style={[swatchStyles.line, { backgroundColor: p.ink, opacity: 0.85 }]} />
-        <View style={[swatchStyles.line, { width: '45%', backgroundColor: p.muted }]} />
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={danger ? 'Delete account permanently' : label}
+      style={({ pressed }) => [
+        styles.actionRow,
+        pressed && styles.actionRowPressed,
+        disabled && styles.disabled,
+      ]}
+    >
+      <View style={[styles.actionIcon, danger && styles.actionIconDanger]}>
+        <Icon name={icon} size={19} color={tint} />
       </View>
-    </View>
+      <Text style={[styles.actionLabel, danger && styles.actionLabelDanger]}>{label}</Text>
+      {!danger ? <Icon name="chevron-forward" size={17} color={colors.faint} /> : null}
+    </Pressable>
   );
 }
-
-const swatchStyles = StyleSheet.create({
-  content: {
-    flex: 1,
-    padding: 8,
-    justifyContent: 'space-between',
-  },
-  split: {
-    flexDirection: 'row',
-  },
-  splitHalf: {
-    flex: 1,
-    padding: 8,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  chip: {
-    width: 16,
-    height: 16,
-    borderRadius: 5,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  line: {
-    height: 3,
-    borderRadius: 2,
-    width: '70%',
-  },
-});
 
 const createStyles = (colors: Palette, t: TextStyles) =>
   StyleSheet.create({
@@ -300,182 +276,201 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       paddingHorizontal: gutter,
       flexGrow: 1,
     },
-
-    // Membership card
-    card: {
+    pressed: {
+      opacity: 0.86,
+    },
+    pass: {
       marginTop: space.lg,
-      borderRadius: radius.card,
-    },
-    cardPressed: {
-      opacity: 0.88,
-    },
-    planButton: {
-      marginTop: space.md,
-    },
-    cardInner: {
-      borderRadius: radius.card,
-      backgroundColor: colors.elevated,
-      borderWidth: 1.5,
-      borderColor: colors.indigo,
       padding: space.lg,
-      overflow: 'hidden',
+      borderRadius: radius.card,
+      backgroundColor: colors.heroSurface,
     },
-    cardTop: {
+    identityRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: space.md,
-    },
-    avatarRing: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
-      padding: 2,
-      backgroundColor: colors.indigo,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     avatar: {
       width: 48,
       height: 48,
       borderRadius: 24,
-      backgroundColor: colors.elevated,
       alignItems: 'center',
       justifyContent: 'center',
+      backgroundColor: 'rgba(255,255,255,0.13)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.2)',
     },
     avatarInitial: {
       fontFamily: font.monoMed,
-      fontSize: 18,
-      color: colors.ink,
+      fontSize: 19,
+      color: colors.heroInk,
     },
-    cardIdentity: {
+    identityCopy: {
       flex: 1,
-      gap: 3,
+      gap: 2,
     },
-    email: {
-      fontFamily: font.sansMed,
-      fontSize: 16,
-      color: colors.ink,
+    identityTitle: {
+      fontFamily: font.sansSemi,
+      fontSize: 17,
+      lineHeight: 22,
+      color: colors.heroInk,
     },
-    tracked: {
+    identityCaption: {
       ...t.caption,
+      color: colors.heroMuted,
     },
-    tierBadge: {
-      paddingHorizontal: 9,
-      paddingVertical: 4,
+    planBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
       borderRadius: radius.chip,
+      backgroundColor: 'rgba(255,255,255,0.13)',
       borderWidth: 1,
-      borderColor: colors.hairline,
+      borderColor: 'rgba(255,255,255,0.2)',
     },
-    tierBadgePro: {
-      borderColor: 'transparent',
-      backgroundColor: colors.indigoBg,
-    },
-    tierBadgeText: {
+    planBadgeText: {
       fontFamily: font.monoMed,
       fontSize: 10,
+      lineHeight: 13,
       letterSpacing: 1,
-      color: colors.faint,
+      color: colors.heroInk,
     },
-    tierBadgeTextPro: {
-      color: colors.indigo,
-    },
-    cardRule: {
+    passRule: {
       height: 1,
-      backgroundColor: colors.hairline,
-      marginVertical: space.md,
+      backgroundColor: 'rgba(255,255,255,0.16)',
+      marginTop: space.lg,
+      marginBottom: space.md,
     },
-    cardFooter: {
+    spendingRow: {
+      flexDirection: 'row',
+      alignItems: 'stretch',
+    },
+    spendingItem: {
+      flex: 1,
+      minWidth: 0,
+      gap: 3,
+    },
+    spendingDivider: {
+      width: 1,
+      marginHorizontal: space.md,
+      backgroundColor: 'rgba(255,255,255,0.16)',
+    },
+    passLabel: {
+      fontFamily: font.mono,
+      fontSize: 10,
+      lineHeight: 13,
+      letterSpacing: 1,
+      color: colors.heroMuted,
+    },
+    passScope: {
+      marginTop: space.md,
+      fontFamily: font.sans,
+      fontSize: 11,
+      lineHeight: 15,
+      color: colors.heroMuted,
+    },
+    planAction: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: space.xs,
-    },
-    cardFooterText: {
-      ...t.caption,
-      color: colors.muted,
-      flex: 1,
-    },
-    cardChevron: {
-      marginLeft: -space.xs,
-    },
-
-    // Appearance swatches
-    swatchRow: {
-      flexDirection: 'row',
       gap: space.sm,
-      marginTop: space.sm,
-    },
-    swatchSlot: {
-      flex: 1,
-      alignItems: 'center',
-      gap: space.xs,
-    },
-    swatchFrame: {
-      width: '100%',
-      height: 56,
+      minHeight: 42,
+      marginTop: space.lg,
+      paddingHorizontal: space.md,
       borderRadius: radius.cardSm,
-      overflow: 'hidden',
+      backgroundColor: 'rgba(255,255,255,0.12)',
+    },
+    planActionText: {
+      flex: 1,
+      fontFamily: font.sansMed,
+      fontSize: 14,
+      color: colors.heroInk,
+    },
+    sectionTitle: {
+      ...t.section,
+      marginTop: space.xxl,
+      marginBottom: space.md,
+    },
+    appearanceControl: {
+      flexDirection: 'row',
+      padding: space.xs,
+      gap: space.xs,
+      borderRadius: radius.cardSm,
+      backgroundColor: colors.paper2,
       borderWidth: 1,
       borderColor: colors.hairline,
     },
-    swatchFrameActive: {
-      borderColor: colors.indigo,
-      borderWidth: 1.5,
+    appearanceOption: {
+      flex: 1,
+      minHeight: 50,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      borderRadius: radius.cardSm - 3,
     },
-    swatchLabel: {
-      fontFamily: font.sans,
-      fontSize: 12,
+    appearanceOptionActive: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+    },
+    appearanceLabel: {
+      fontFamily: font.sansMed,
+      fontSize: 13,
       color: colors.faint,
     },
-    swatchLabelActive: {
-      fontFamily: font.sansMed,
+    appearanceLabelActive: {
       color: colors.ink,
     },
-
-    // Spending stat tile
-    statTile: {
-      flexDirection: 'row',
-      marginTop: space.sm,
-      backgroundColor: colors.surface,
+    actionGroup: {
+      overflow: 'hidden',
       borderRadius: radius.card,
+      backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
-      padding: space.lg,
     },
-    statHalf: {
-      flex: 1,
-      gap: space.xs,
-    },
-    statValue: {
-      marginTop: 2,
-    },
-    statDivider: {
-      width: 1,
-      backgroundColor: colors.hairline,
-      marginHorizontal: space.lg,
-    },
-
-    // Footer
-    footer: {
-      marginTop: space.xxl,
+    actionRow: {
+      minHeight: 62,
+      flexDirection: 'row',
       alignItems: 'center',
-      gap: space.sm,
+      paddingHorizontal: space.md,
+      gap: space.md,
     },
-    logout: {
+    actionRowPressed: {
+      backgroundColor: colors.paper2,
+    },
+    actionIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.paper2,
+    },
+    actionIconDanger: {
+      backgroundColor: colors.isDark ? 'rgba(255,107,122,0.1)' : 'rgba(192,68,61,0.08)',
+    },
+    actionLabel: {
+      flex: 1,
       fontFamily: font.sansMed,
-      fontSize: 14,
+      fontSize: 15,
       color: colors.ink,
     },
-    deleteAccount: {
-      fontFamily: font.sansMed,
-      fontSize: 14,
+    actionLabelDanger: {
       color: colors.debit,
     },
-    actionDisabled: {
-      opacity: 0.55,
+    actionRule: {
+      height: 1,
+      marginLeft: space.md + 36 + space.md,
+      backgroundColor: colors.hairline,
+    },
+    disabled: {
+      opacity: 0.5,
     },
     version: {
+      marginTop: space.lg,
+      textAlign: 'center',
       fontFamily: font.mono,
       fontSize: 11,
+      lineHeight: 15,
       color: colors.faint,
       letterSpacing: 0.4,
     },

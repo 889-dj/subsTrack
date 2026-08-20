@@ -17,8 +17,10 @@ export function KeyValueRow({ label, value, children, last = false }: KeyValueRo
 
   return (
     <View style={[styles.row, last && styles.noRule]}>
-      <Text style={t.label}>{label}</Text>
-      {children ?? <Text style={styles.value}>{value}</Text>}
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.valueWrap}>
+        {children ?? <Text style={styles.value}>{value}</Text>}
+      </View>
     </View>
   );
 }
@@ -37,8 +39,18 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     noRule: {
       borderBottomWidth: 0,
     },
+    label: {
+      ...t.label,
+      flexShrink: 0,
+    },
+    valueWrap: {
+      flex: 1,
+      alignItems: 'flex-end',
+    },
     value: {
       ...t.amount,
+      fontSize: 14.5,
+      lineHeight: 20,
       textAlign: 'right',
       flexShrink: 1,
     },

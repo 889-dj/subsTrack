@@ -163,20 +163,4 @@ export function longDate(iso: string): string {
   });
 }
 
-/** Synthesized past charges for the detail screen — cadence derived from billing cycle. */
-export function synthesizePaymentHistory(
-  sub: Subscription,
-  count = 3
-): { date: string; amount: number }[] {
-  const intervalDays = sub.billingCycle === 'yearly' ? 365 : 30;
-  const next = new Date(sub.nextRenewalDate).getTime();
-  const history: { date: string; amount: number }[] = [];
-  for (let i = 1; i <= count; i++) {
-    const t = next - intervalDays * i * DAY;
-    if (t > Date.now()) continue; // don't show "past" payments still in the future
-    history.push({ date: new Date(t).toISOString(), amount: sub.cost });
-  }
-  return history;
-}
-
 export { monthlyCost, monthlyTotal };

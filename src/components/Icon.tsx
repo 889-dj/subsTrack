@@ -14,13 +14,19 @@ import {
   ChartHistogramIcon,
   ChartUpIcon,
   CheckmarkCircle02Icon,
+  ComputerIcon,
+  Delete02Icon,
   FlashIcon,
   Home01Icon,
   InformationCircleIcon,
+  Logout01Icon,
+  Moon02Icon,
   Notification03Icon,
   PieChart02Icon,
   Search01Icon,
+  Sun03Icon,
   Tick02Icon,
+  UserCircleIcon,
   Wallet01Icon,
 } from '@hugeicons/core-free-icons';
 
@@ -56,6 +62,12 @@ const ICONS = {
   chart: AnalyticsUpIcon,
   trophy: Award01Icon,
   'pie-chart': PieChart02Icon,
+  user: UserCircleIcon,
+  logout: Logout01Icon,
+  delete: Delete02Icon,
+  sun: Sun03Icon,
+  moon: Moon02Icon,
+  system: ComputerIcon,
 } as const;
 
 export type IconName = keyof typeof ICONS;

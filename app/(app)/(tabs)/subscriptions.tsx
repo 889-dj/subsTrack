@@ -13,7 +13,11 @@ import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
 import { gutter, space, type Palette, type TextStyles } from '@/src/theme';
-import { monthlyTotal } from '@/src/utils/money';
+import {
+  formatCompactMoney,
+  monthlyTotal,
+  scopeSubscriptionsByCurrency,
+} from '@/src/utils/money';
 
 export default function SubscriptionsScreen() {
   const router = useRouter();
@@ -27,8 +31,9 @@ export default function SubscriptionsScreen() {
   const [category, setCategory] = useState('All');
 
   const subs = useMemo(() => data ?? [], [data]);
-  const monthly = useMemo(() => monthlyTotal(subs), [subs]);
-  const currency = subs[0]?.currency ?? 'INR';
+  const currencyScope = useMemo(() => scopeSubscriptionsByCurrency(subs), [subs]);
+  const monthly = useMemo(() => monthlyTotal(currencyScope.included), [currencyScope.included]);
+  const currency = currencyScope.currency;
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -57,14 +62,24 @@ export default function SubscriptionsScreen() {
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.indigo} />
         }
       >
-        <View style={styles.header}><Text style={styles.eyebrow}>YOUR LEDGER</Text><Text style={t.heading}>Subscriptions</Text></View>
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>YOUR LEDGER</Text>
+          <Text style={t.heading}>Subscriptions</Text>
+        </View>
         <View style={styles.statsRow}>
           <Text style={styles.statText}>{subs.length} active</Text>
           <Text style={styles.statDot}>·</Text>
           <Text style={styles.statText}>
-            {currency} {Math.round(monthly).toLocaleString('en-IN')}/month
+            {formatCompactMoney(monthly, currency)}/month
           </Text>
         </View>
+        {currencyScope.excludedCount > 0 ? (
+          <Text style={styles.scopeHint}>
+            Total shows {currency}; {currencyScope.excludedCount} subscription
+            {currencyScope.excludedCount === 1 ? '' : 's'} in{' '}
+            {currencyScope.excludedCurrencies.join(', ')} remain separate.
+          </Text>
+        ) : null}
 
         <View style={styles.searchRow}>
           <SearchBar value={query} onChangeText={setQuery} />
@@ -132,6 +147,12 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     },
     statDot: {
       ...t.caption,
+    },
+    scopeHint: {
+      ...t.caption,
+      marginTop: -space.sm,
+      marginBottom: space.lg,
+      fontSize: 12,
     },
     searchRow: {
       marginBottom: space.md,

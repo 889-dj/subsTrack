@@ -60,12 +60,12 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={styles.wordmark}>SUBSTRACK</Text>
           <Text style={styles.title}>
-            {isRegister ? 'Let\'s find everything charging your account.' : 'Welcome back.'}
+            {isRegister ? 'See every recurring charge in one place.' : 'Welcome back.'}
           </Text>
           <Text style={styles.subtitle}>
             {isRegister
-              ? 'Most of it is hidden in four or five places.'
-              : 'Log in to see what you committed to.'}
+              ? 'Create an account to track renewal dates and recurring totals.'
+              : 'Your subscription ledger is ready.'}
           </Text>
 
           <View style={styles.form}>
@@ -101,6 +101,8 @@ export default function LoginScreen() {
               setMode(isRegister ? 'login' : 'register');
             }}
             style={styles.toggle}
+            accessibilityRole="button"
+            accessibilityLabel={isRegister ? 'Switch to log in' : 'Switch to sign up'}
           >
             <Text style={styles.toggleText}>
               {isRegister ? 'Already have an account? ' : "Don't have an account? "}
@@ -133,7 +135,11 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       marginBottom: space.lg,
     },
     title: {
-      ...t.title,
+      fontFamily: font.sansSemi,
+      fontSize: 28,
+      lineHeight: 34,
+      letterSpacing: -0.7,
+      color: colors.ink,
       marginBottom: space.xs,
     },
     subtitle: {

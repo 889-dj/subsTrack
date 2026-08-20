@@ -18,7 +18,7 @@ const CARD_WIDTH = 164;
 /**
  * A single card for one renewal day, sized for a horizontal carousel. When
  * more than one subscription shares the date it shows stacked icons with a
- * "+N" badge and a combined total instead of trying to fit every name.
+ * "+N" badge. Totals are only combined when every charge uses one currency.
  */
 export function UpcomingPayment({ subs, onPress }: UpcomingPaymentProps) {
   const { colors, text: t } = useTheme();
@@ -29,11 +29,14 @@ export function UpcomingPayment({ subs, onPress }: UpcomingPaymentProps) {
   const isGroup = subs.length > 1;
   const total = subs.reduce((sum, s) => sum + s.cost, 0);
   const currency = primary.currency;
+  const hasMixedCurrencies = new Set(subs.map((sub) => sub.currency)).size > 1;
   const dateLabel = relativeDateLabel(primary.nextRenewalDate);
 
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${isGroup ? `${subs.length} subscriptions` : primary.name}, ${dateLabel}`}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       {isGroup ? (
@@ -61,7 +64,11 @@ export function UpcomingPayment({ subs, onPress }: UpcomingPaymentProps) {
       </Text>
 
       <View style={styles.amountRow}>
-        <AmountText value={total} currency={currency} tone="ink" size={15} />
+        {hasMixedCurrencies ? (
+          <Text style={styles.mixedAmount}>Multiple currencies</Text>
+        ) : (
+          <AmountText value={total} currency={currency} tone="ink" size={15} />
+        )}
       </View>
     </Pressable>
   );
@@ -116,6 +123,12 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     },
     amountRow: {
       marginTop: space.lg,
+    },
+    mixedAmount: {
+      fontFamily: font.sansMed,
+      fontSize: 11.5,
+      lineHeight: 15,
+      color: colors.muted,
     },
   });
 

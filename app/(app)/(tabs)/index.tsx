@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { EmptyState } from '@/src/components/EmptyState';
+import { Icon } from '@/src/components/Icon';
 import { Logo } from '@/src/components/Logo';
 import { MultiRenewalSheet } from '@/src/components/MultiRenewalSheet';
 import { SectionHeader } from '@/src/components/SectionHeader';
@@ -19,8 +20,8 @@ import { useAuth } from '@/src/hooks/useAuth';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
-import { gutter, space, type Palette, type TextStyles } from '@/src/theme';
-import { monthlyTotal } from '@/src/utils/money';
+import { font, gutter, space, type Palette, type TextStyles } from '@/src/theme';
+import { monthlyTotal, scopeSubscriptionsByCurrency } from '@/src/utils/money';
 import { groupByRenewalDate, type RenewalGroup } from '@/src/utils/subscriptions';
 
 function greeting(): string {
@@ -43,9 +44,10 @@ export default function OverviewScreen() {
   const [forecastRange, setForecastRange] = useState<ForecastRange>(6);
 
   const subs = useMemo(() => data ?? [], [data]);
-  const monthly = useMemo(() => monthlyTotal(subs), [subs]);
+  const currencyScope = useMemo(() => scopeSubscriptionsByCurrency(subs), [subs]);
+  const monthly = useMemo(() => monthlyTotal(currencyScope.included), [currencyScope.included]);
   const yearly = monthly * 12;
-  const currency = subs[0]?.currency ?? 'INR';
+  const currency = currencyScope.currency;
 
   const renewalGroups = useMemo(() => groupByRenewalDate(subs), [subs]);
   const upcomingGroups = useMemo(() => renewalGroups.slice(0, 5), [renewalGroups]);
@@ -67,20 +69,21 @@ export default function OverviewScreen() {
       }
     >
       <View style={styles.header}>
-        <View style={styles.headerText}>
+        <View style={styles.headerCopy}>
           <Text style={styles.eyebrow}>{greeting()}</Text>
-          <Text style={t.heading} numberOfLines={1}>Your subscriptions</Text>
+          <Text style={styles.overviewTitle}>Overview</Text>
         </View>
-        <View style={styles.headerActions}>
-          <Pressable
-            hitSlop={10}
-            onPress={() => router.push('/account')}
-            accessibilityRole="button"
-            accessibilityLabel="Open settings and Pro plans"
-          >
-            <Logo name={user?.email || '?'} size={36} />
-          </Pressable>
-        </View>
+        <Pressable
+          hitSlop={10}
+          onPress={() => router.push('/account')}
+          accessibilityRole="button"
+          accessibilityLabel="Open settings and Pro plans"
+          style={({ pressed }) => [styles.accountButton, pressed && styles.accountButtonPressed]}
+        >
+          <Logo name={user?.email || '?'} size={30} />
+          <Text style={styles.accountLabel}>Account</Text>
+          <Icon name="chevron-forward" size={14} color={colors.faint} />
+        </Pressable>
       </View>
 
       {isLoading ? (
@@ -92,6 +95,11 @@ export default function OverviewScreen() {
             yearly={yearly}
             currency={currency}
             activeCount={subs.length}
+            scopeNote={
+              currencyScope.excludedCount > 0
+                ? `${currency} totals only · ${currencyScope.excludedCount} subscription${currencyScope.excludedCount === 1 ? '' : 's'} in ${currencyScope.excludedCurrencies.join(', ')} shown separately`
+                : undefined
+            }
           />
 
           {isError ? <Text style={styles.error}>Couldn't refresh — showing the last data.</Text> : null}
@@ -99,7 +107,12 @@ export default function OverviewScreen() {
           <SectionHeader
             label="Coming up"
             trailing={
-              <Pressable onPress={() => router.push('/subscriptions')} hitSlop={8}>
+              <Pressable
+                onPress={() => router.push('/subscriptions')}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="See all subscriptions"
+              >
                 <Text style={styles.link}>See all</Text>
               </Pressable>
             }
@@ -132,7 +145,7 @@ export default function OverviewScreen() {
           <SectionHeader label="Renewal forecast" />
           {subs.length > 0 ? (
             <SpendingTrendChart
-              subscriptions={subs}
+              subscriptions={currencyScope.included}
               currency={currency}
               months={forecastRange}
               onMonthsChange={setForecastRange}
@@ -168,21 +181,40 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      gap: space.md,
       marginBottom: space.xl,
     },
-    headerText: {
+    headerCopy: {
       flex: 1,
-      marginRight: space.md,
+      minWidth: 0,
     },
-    subtitle: {
-      ...t.caption,
-      marginTop: 4,
+    eyebrow: { ...t.label, color: colors.indigo, marginBottom: 3 },
+    overviewTitle: {
+      fontFamily: font.sansMed,
+      fontSize: 26,
+      lineHeight: 31,
+      letterSpacing: -0.6,
+      color: colors.ink,
     },
-    eyebrow: { ...t.label, color: colors.indigo, marginBottom: 5 },
-    headerActions: {
+    accountButton: {
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: space.md,
+      gap: 6,
+      paddingLeft: 5,
+      paddingRight: space.sm,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      borderRadius: 22,
+      backgroundColor: colors.surface,
+    },
+    accountButtonPressed: {
+      opacity: 0.72,
+    },
+    accountLabel: {
+      fontFamily: font.sansMed,
+      fontSize: 12,
+      color: colors.ink,
     },
     error: {
       ...t.caption,

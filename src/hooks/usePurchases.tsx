@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { CustomerInfo } from 'react-native-purchases';
 import * as purchases from '@/src/lib/purchases';
 import type { Plan, PurchaseOutcome, PurchasesStatus, RestoreOutcome } from '@/src/lib/purchases';
@@ -31,6 +39,7 @@ export function PurchasesProvider({ children }: { children: React.ReactNode }) {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [plansError, setPlansError] = useState<string | null>(null);
+  const identifiedUserId = useRef<string | null>(null);
 
   // A session restored from a stored token carries a placeholder id, which must
   // not be used as a RevenueCat app user id — every restored session would share
@@ -47,6 +56,7 @@ export function PurchasesProvider({ children }: { children: React.ReactNode }) {
         ? ((await purchases.identify(appUserId)) ?? (await purchases.fetchCustomerInfo()))
         : await purchases.fetchCustomerInfo();
       if (cancelled) return;
+      if (appUserId) identifiedUserId.current = appUserId;
       setCustomerInfo(info);
       setIsReady(true);
     })();
@@ -59,9 +69,10 @@ export function PurchasesProvider({ children }: { children: React.ReactNode }) {
   // Sign-out has to reach the SDK too, or the next account inherits this one's
   // entitlement for as long as the process lives.
   useEffect(() => {
-    if (status !== 'ready' || user) return;
+    if (status !== 'ready' || user || !identifiedUserId.current) return;
     (async () => {
       await purchases.forgetUser();
+      identifiedUserId.current = null;
       setCustomerInfo(await purchases.fetchCustomerInfo());
     })();
   }, [status, user]);

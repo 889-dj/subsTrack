@@ -26,6 +26,8 @@ export function FilterChips({ options, value, onChange }: FilterChipsProps) {
           <Pressable
             key={opt}
             onPress={() => onChange(opt)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: selected }}
             style={({ pressed }) => [
               styles.chip,
               selected && styles.chipSelected,

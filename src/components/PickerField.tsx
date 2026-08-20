@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BottomSheetModal } from '@/src/components/BottomSheetModal';
 import { Icon } from '@/src/components/Icon';
 import { useTheme } from '@/src/hooks/useTheme';
-import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
+import { font, radius, space, type Palette, type TextStyles } from '@/src/theme';
 
 export interface PickerOption {
   value: string;
@@ -41,39 +42,52 @@ export function PickerField({ label, value, options, onChange, renderValue }: Pi
         <Icon name="chevron-down" size={16} color={colors.muted} />
       </Pressable>
 
-      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.sheetTitle}>{label}</Text>
-            <FlatList
-              data={options}
-              keyExtractor={(o) => o.value}
-              style={styles.list}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => {
-                const isSelected = item.value === value;
-                return (
-                  <Pressable
-                    style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-                    onPress={() => {
-                      onChange(item.value);
-                      setOpen(false);
-                    }}
-                  >
-                    <Text style={[styles.rowLabel, isSelected && styles.rowLabelSelected]}>
-                      {item.label}
-                    </Text>
-                    {item.meta ? <Text style={styles.rowMeta}>{item.meta}</Text> : null}
-                    {isSelected ? (
-                      <Icon name="checkmark" size={16} color={colors.indigo} />
-                    ) : null}
-                  </Pressable>
-                );
-              }}
-            />
+      <BottomSheetModal
+        visible={open}
+        onClose={() => setOpen(false)}
+        maxHeight="70%"
+        accessibilityLabel={`${label} options`}
+      >
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>{label}</Text>
+          <Pressable
+            onPress={() => setOpen(false)}
+            accessibilityRole="button"
+            accessibilityLabel={`Close ${label} options`}
+            style={({ pressed }) => [styles.close, pressed && styles.closePressed]}
+          >
+            <Icon name="close" size={20} color={colors.muted} />
           </Pressable>
-        </Pressable>
-      </Modal>
+        </View>
+        <FlatList
+          data={options}
+          keyExtractor={(o) => o.value}
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => {
+            const isSelected = item.value === value;
+            return (
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isSelected }}
+                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+                onPress={() => {
+                  onChange(item.value);
+                  setOpen(false);
+                }}
+              >
+                <Text style={[styles.rowLabel, isSelected && styles.rowLabelSelected]}>
+                  {item.label}
+                </Text>
+                {item.meta ? <Text style={styles.rowMeta}>{item.meta}</Text> : null}
+                {isSelected ? (
+                  <Icon name="checkmark" size={16} color={colors.indigo} />
+                ) : null}
+              </Pressable>
+            );
+          }}
+        />
+      </BottomSheetModal>
     </View>
   );
 }
@@ -95,23 +109,26 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     fieldValue: {
       ...t.amount,
     },
-    backdrop: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'flex-end',
-    },
-    sheet: {
-      backgroundColor: colors.surface,
-      borderTopLeftRadius: radius.sheet,
-      borderTopRightRadius: radius.sheet,
-      paddingHorizontal: gutter,
-      paddingTop: gutter,
-      paddingBottom: space.xxl,
-      maxHeight: '70%',
+    sheetHeader: {
+      minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
     },
     sheetTitle: {
       ...t.label,
-      marginBottom: space.sm,
+      paddingTop: space.xs,
+    },
+    close: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: -space.sm,
+      marginRight: -space.sm,
+    },
+    closePressed: {
+      opacity: 0.55,
     },
     list: {
       flexGrow: 0,

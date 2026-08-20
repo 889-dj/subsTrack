@@ -159,7 +159,8 @@ export default function AddEditScreen() {
       } else {
         await addMutation.mutateAsync(input);
       }
-      router.back();
+      if (router.canGoBack()) router.back();
+      else router.replace('/');
     } catch (e: any) {
       setError(e?.response?.data?.message ?? "Couldn't save that. Try again.");
     }
@@ -180,9 +181,9 @@ export default function AddEditScreen() {
             showsVerticalScrollIndicator={false}
           >
             <ScreenHeader
-              title={isEdit ? 'Edit mandate' : 'Add a mandate'}
+              title={isEdit ? 'Edit subscription' : 'Add subscription'}
               dismiss="close"
-              caption={isEdit ? undefined : 'What is charging you, and how much.'}
+              caption={isEdit ? undefined : 'Add the billing details and next renewal.'}
             />
 
             <TextField
@@ -219,12 +220,15 @@ export default function AddEditScreen() {
               </View>
             </View>
 
-            <Text style={t.label}>Every</Text>
-            <View style={styles.segmentGroup}>
+            <Text style={t.label}>Billing cycle</Text>
+            <View style={styles.segmentGroup} accessibilityRole="radiogroup">
               {CYCLES.map((cycle) => (
                 <Pressable
                   key={cycle.value}
                   onPress={() => setBillingCycle(cycle.value)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: billingCycle === cycle.value }}
+                  accessibilityLabel={`${cycle.label} billing`}
                   style={[styles.segment, billingCycle === cycle.value && styles.segmentActive]}
                 >
                   <Text
@@ -239,8 +243,13 @@ export default function AddEditScreen() {
               ))}
             </View>
 
-            <Text style={t.label}>Next debit</Text>
-            <Pressable style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+            <Text style={t.label}>Next renewal</Text>
+            <Pressable
+              style={styles.dateButton}
+              onPress={() => setShowDatePicker(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Choose next renewal date, currently ${nextRenewalDate.toLocaleDateString('en-IN')}`}
+            >
               <Text style={styles.dateButtonText}>
                 {nextRenewalDate.toLocaleDateString('en-IN', {
                   day: 'numeric',
@@ -271,6 +280,8 @@ export default function AddEditScreen() {
                       setCategory(selected ? '' : c);
                       if (selected) setCategoryOther('');
                     }}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selected }}
                     style={[styles.categoryChip, selected && styles.categoryChipActive]}
                   >
                     <Text style={[styles.categoryText, selected && styles.categoryTextActive]}>
@@ -291,7 +302,7 @@ export default function AddEditScreen() {
               />
             ) : null}
 
-            <Text style={t.label}>Paid via</Text>
+            <Text style={t.label}>Payment method</Text>
             <View style={styles.categoryGroup}>
               {PAYMENT_APPS.map((app) => {
                 const selected = source === app;
@@ -302,6 +313,8 @@ export default function AddEditScreen() {
                       setSource(selected ? '' : app);
                       if (selected) setSourceOther('');
                     }}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selected }}
                     style={[styles.categoryChip, selected && styles.categoryChipActive]}
                   >
                     <Text style={[styles.categoryText, selected && styles.categoryTextActive]}>
@@ -334,7 +347,7 @@ export default function AddEditScreen() {
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
             <Button
-              label={isEdit ? 'Save changes' : 'Add mandate'}
+              label={isEdit ? 'Save changes' : 'Add subscription'}
               onPress={handleSave}
               loading={isSaving}
             />
@@ -423,10 +436,8 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       borderColor: colors.indigoBg,
     },
     categoryText: {
-      fontFamily: font.mono,
-      fontSize: 11,
-      letterSpacing: 0.8,
-      textTransform: 'uppercase',
+      fontFamily: font.sansMed,
+      fontSize: 12.5,
       color: colors.muted,
     },
     categoryTextActive: {

@@ -10,7 +10,7 @@ interface CategoryChipProps {
   onPress?: () => void;
 }
 
-/** Mono label on an indigo tint. No border when selected — the fill is the state. */
+/** Compact sentence-case label on an indigo tint. */
 export function CategoryChip({ label, selected = false, onPress }: CategoryChipProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -23,6 +23,8 @@ export function CategoryChip({ label, selected = false, onPress }: CategoryChipP
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: selected }}
       style={({ pressed }) => [
         styles.chip,
         selected && styles.chipSelected,
@@ -50,11 +52,9 @@ const createStyles = (colors: Palette) =>
       borderColor: colors.indigoBg,
     },
     text: {
-      fontFamily: font.mono,
-      fontSize: 11,
-      lineHeight: 14,
-      letterSpacing: 0.8,
-      textTransform: 'uppercase',
+      fontFamily: font.sansMed,
+      fontSize: 12,
+      lineHeight: 16,
       color: colors.muted,
     },
     textSelected: {

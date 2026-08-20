@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
@@ -7,10 +7,10 @@ import Animated, { interpolate, useAnimatedStyle } from 'react-native-reanimated
 import { Icon, type IconName } from '@/src/components/Icon';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
-import { radius, space, type Palette } from '@/src/theme';
+import { font, radius, space, type Palette } from '@/src/theme';
 
 /** Height of the floating pill itself, so screens can clear it. */
-export const TAB_BAR_HEIGHT = 60;
+export const TAB_BAR_HEIGHT = 68;
 /** What a scrolling screen must pad its content by to clear the bar. */
 export const TAB_BAR_CLEARANCE = TAB_BAR_HEIGHT + space.xl + space.md;
 
@@ -21,12 +21,18 @@ const ICONS: Record<string, IconName> = {
   insights: 'chart',
 };
 
+const LABELS: Record<string, string> = {
+  index: 'Home',
+  calendar: 'Calendar',
+  subscriptions: 'Subs',
+  insights: 'Insights',
+};
+
 /**
- * Five slots in one floating, fully-rounded pill: four real tab destinations
- * with the "+" add action fused into the center slot rather than living as
- * its own floating button elsewhere. No text labels — the icon set is small
- * and specific enough to read on its own; active state is colour + a soft
- * pill behind the glyph. The whole bar scales down slightly while a screen
+ * Five labelled slots in one floating pill: four real tab destinations with
+ * the add action in the centre. Labels keep the less-familiar ledger and
+ * insights destinations obvious without relying on icon recognition alone.
+ * The whole bar scales down slightly while a screen
  * is actively being scrolled (down), and springs back on scroll-up or at
  * rest, echoing the Revolut-style shrinking dock.
  */
@@ -51,6 +57,7 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
     const { options } = descriptors[route.key];
     const focused = state.index === index;
     const iconName = ICONS[route.name] ?? 'wallet';
+    const label = LABELS[route.name] ?? options.title ?? route.name;
 
     function onPress() {
       const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -63,15 +70,16 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
       <Pressable
         key={route.key}
         onPress={onPress}
-        accessibilityRole="button"
+        accessibilityRole="tab"
         accessibilityState={focused ? { selected: true } : {}}
-        accessibilityLabel={options.title ?? route.name}
-        accessibilityHint={`Opens the ${options.title ?? route.name} tab`}
+        accessibilityLabel={label}
+        accessibilityHint={`Opens the ${label} tab`}
         style={({ pressed }) => [styles.item, pressed && styles.pressed]}
       >
         <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
-          <Icon name={iconName} size={20} color={focused ? colors.indigo : colors.muted} />
+          <Icon name={iconName} size={19} color={focused ? colors.indigo : colors.muted} />
         </View>
+        <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
       </Pressable>
     );
   }
@@ -85,9 +93,12 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
           onPress={() => router.push('/add')}
           accessibilityRole="button"
           accessibilityLabel="Add a subscription"
-          style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed]}
+          style={({ pressed }) => [styles.addSlot, pressed && styles.addButtonPressed]}
         >
-          <Icon name="add" size={22} color={colors.white} />
+          <View style={styles.addButton}>
+            <Icon name="add" size={21} color={colors.white} />
+          </View>
+          <Text style={styles.addLabel}>Add</Text>
         </Pressable>
 
         {rightRoutes.map(renderTab)}
@@ -119,29 +130,52 @@ const createStyles = (colors: Palette) =>
     },
     item: {
       flex: 1,
-      minWidth: 48,
-      minHeight: 48,
+      minWidth: 51,
+      height: TAB_BAR_HEIGHT,
       alignItems: 'center',
       justifyContent: 'center',
+      gap: 2,
     },
     iconWrap: {
-      width: 40,
-      height: 40,
-      borderRadius: radius.chip,
+      width: 34,
+      height: 32,
+      borderRadius: 11,
       alignItems: 'center',
       justifyContent: 'center',
     },
     iconWrapActive: {
       backgroundColor: colors.indigoBg,
     },
+    tabLabel: {
+      fontFamily: font.sansMed,
+      fontSize: 9.5,
+      lineHeight: 12,
+      color: colors.muted,
+    },
+    tabLabelActive: {
+      color: colors.indigo,
+    },
+    addSlot: {
+      flex: 1,
+      minWidth: 51,
+      height: TAB_BAR_HEIGHT,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 2,
+    },
     addButton: {
-      width: 44,
-      height: 44,
+      width: 36,
+      height: 34,
       borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.indigo,
-      marginHorizontal: 2,
+    },
+    addLabel: {
+      fontFamily: font.sansMed,
+      fontSize: 9.5,
+      lineHeight: 12,
+      color: colors.indigo,
     },
     addButtonPressed: {
       opacity: 0.85,

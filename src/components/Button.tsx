@@ -18,8 +18,8 @@ interface ButtonProps {
 /**
  * One shape at 52px tall. `primary` is indigo fill; everything else is a
  * hairline-bordered ghost — the only thing that changes is the ink.
- * `danger` is reserved for cancelling a mandate, which is an outflow the user
- * is stopping, so it earns the debit colour on the label alone.
+ * `danger` is reserved for destructive account or tracking actions, so it
+ * earns the debit colour on the label alone.
  */
 export function Button({
   label,

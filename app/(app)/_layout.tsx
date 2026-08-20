@@ -23,10 +23,10 @@ export default function AppLayout() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="add" options={{ headerShown: false, presentation: 'modal' }} />
+      <Stack.Screen name="add" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
       <Stack.Screen name="[id]" options={{ headerShown: false }} />
       <Stack.Screen name="account" options={{ headerShown: false }} />
-      <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal' }} />
+      <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
     </Stack>
   );
 }

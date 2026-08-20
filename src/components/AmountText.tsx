@@ -20,7 +20,7 @@ interface AmountTextProps {
   round?: boolean;
   style?: TextStyle | TextStyle[];
   /** Colour override — only ever `debit` or `saved`, and only when it means it. */
-  tone?: 'ink' | 'muted' | 'debit' | 'saved';
+  tone?: 'ink' | 'muted' | 'debit' | 'saved' | 'hero';
   numberOfLines?: number;
   /** Digit size. The symbol is derived from it, never set directly. */
   size?: number;
@@ -46,16 +46,24 @@ export function AmountText({
     muted: colors.muted,
     debit: colors.debit,
     saved: colors.saved,
+    hero: colors.heroInk,
   };
 
   const digits = round
     ? Math.round(value).toLocaleString('en-IN')
     : value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const symbol = { fontSize: Math.round(size * 0.65), color: colors.muted };
+  const symbol = {
+    fontSize: Math.round(size * 0.65),
+    color: tone === 'hero' ? colors.heroMuted : colors.muted,
+  };
 
   return (
     <Text
-      style={[t.amount, { fontSize: size, color: TONES[tone] }, style]}
+      style={[
+        t.amount,
+        { fontSize: size, lineHeight: Math.round(size * 1.24), color: TONES[tone] },
+        style,
+      ]}
       numberOfLines={numberOfLines}
     >
       {approx ? <Text style={symbol}>≈</Text> : null}

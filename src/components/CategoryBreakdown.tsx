@@ -10,7 +10,7 @@ interface CategoryBreakdownProps {
   currency: string;
 }
 
-/** Interactive category donut with its readout outside the constrained centre. */
+/** Compact interactive category donut; the rows carry the precise values. */
 export function CategoryBreakdown({ entries, currency }: CategoryBreakdownProps) {
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
@@ -26,10 +26,6 @@ export function CategoryBreakdown({ entries, currency }: CategoryBreakdownProps)
       })),
     [entries, accents],
   );
-  const focusedIndex = activeIndex >= 0 ? activeIndex : 0;
-  const focused = entries[focusedIndex];
-  const focusedPercent = focused && total > 0 ? Math.round((focused.amount / total) * 100) : 0;
-
   return (
     <View style={styles.card}>
       <View style={styles.totalRow}>
@@ -43,7 +39,7 @@ export function CategoryBreakdown({ entries, currency }: CategoryBreakdownProps)
       <View style={styles.chartRow}>
         <PieChart
           data={data}
-          size={156}
+          size={142}
           innerRadius={0.62}
           padAngle={2}
           minAngle={2}
@@ -54,17 +50,6 @@ export function CategoryBreakdown({ entries, currency }: CategoryBreakdownProps)
         >
           <PieChart.Slices cornerRadius={4} popOut={5} dimOpacity={0.3} />
         </PieChart>
-
-        {focused ? (
-          <View style={styles.focusReadout} accessible>
-            <Text style={styles.focusKicker}>
-              {activeIndex >= 0 ? 'SELECTED' : 'LARGEST SHARE'}
-            </Text>
-            <Text style={styles.focusName} numberOfLines={2}>{focused.category}</Text>
-            <AmountText value={focused.amount} currency={currency} size={18} />
-            <Text style={styles.focusPercent}>{focusedPercent}% of annual spend</Text>
-          </View>
-        ) : null}
       </View>
 
       <View style={styles.list} accessibilityRole="list">
@@ -119,27 +104,11 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     },
     totalHint: { ...t.caption, marginTop: 3 },
     chartRow: {
-      minHeight: 172,
-      marginVertical: space.lg,
-      flexDirection: 'row',
+      minHeight: 154,
+      marginVertical: space.md,
       alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: space.lg,
+      justifyContent: 'center',
     },
-    focusReadout: { flex: 1, alignItems: 'flex-start' },
-    focusKicker: {
-      ...t.label,
-      fontSize: 9,
-      lineHeight: 12,
-      marginBottom: space.xs,
-    },
-    focusName: {
-      ...t.title,
-      fontSize: 16,
-      lineHeight: 21,
-      marginBottom: space.xs,
-    },
-    focusPercent: { ...t.caption, fontSize: 11, marginTop: space.xs },
     list: { gap: space.xs },
     row: {
       minHeight: 44,

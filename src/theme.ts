@@ -17,6 +17,12 @@ export interface Palette {
   surface: string;
   /** One step up from `surface` — modals, raised rows, the hero card. */
   elevated: string;
+  /** Screen-dimming layer behind bottom sheets and transparent modals. */
+  modalScrim: string;
+  /** Grabber shown at the top of every bottom sheet. */
+  sheetHandle: string;
+  /** Neutral shadow colour for raised surfaces. */
+  shadow: string;
   /** Brand ink block used for the single primary data surface. */
   heroSurface: string;
   heroInk: string;
@@ -50,6 +56,9 @@ export const lightColors: Palette = {
   paper2: '#EEF0F4',
   surface: '#FFFFFF',
   elevated: '#FFFFFF',
+  modalScrim: 'rgba(8,12,24,0.38)',
+  sheetHandle: '#D3D7E1',
+  shadow: '#000000',
   heroSurface: '#18214A',
   heroInk: '#FFFFFF',
   heroMuted: '#B9C2EA',
@@ -79,6 +88,9 @@ export const darkColors: Palette = {
   paper2: '#0D0F14', // background secondary
   surface: '#12151B', // card
   elevated: '#171A21', // elevated card / hero / modals
+  modalScrim: 'rgba(0,0,0,0.62)',
+  sheetHandle: 'rgba(255,255,255,0.18)',
+  shadow: '#000000',
   heroSurface: '#5367F5',
   heroInk: '#FFFFFF',
   heroMuted: '#DCE1FF',

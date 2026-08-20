@@ -14,7 +14,7 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number];
 
-/** Where the mandate itself was set up — the app the debit actually runs through. */
+/** Where the subscription payment was set up or is billed. */
 export const PAYMENT_APPS = [
   'Google Pay',
   'PhonePe',
@@ -33,7 +33,7 @@ export interface CurrencyOption {
 }
 
 /**
- * Single source of truth for supported currencies — the add-mandate dropdown
+ * Single source of truth for supported currencies — the add-subscription dropdown
  * and the amount symbol lookup both read from this list, so adding a
  * currency is a one-line change here rather than a hunt across the app.
  */
@@ -57,7 +57,7 @@ export interface Subscription {
   billingCycle: BillingCycle;
   nextRenewalDate: string; // ISO date string
   category?: string;
-  /** The app or method the mandate runs through, e.g. "Google Pay". */
+  /** The app or method the subscription is billed through, e.g. "Google Pay". */
   source?: string;
   note?: string;
   /** Plan/tier label shown on the detail screen, e.g. "Premium", "Pro". Optional, synthetic. */
