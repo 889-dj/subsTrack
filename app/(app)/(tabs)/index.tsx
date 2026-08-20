@@ -22,7 +22,11 @@ import { useTheme } from '@/src/hooks/useTheme';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { font, gutter, space, type Palette, type TextStyles } from '@/src/theme';
 import { monthlyTotal, scopeSubscriptionsByCurrency } from '@/src/utils/money';
-import { groupByRenewalDate, type RenewalGroup } from '@/src/utils/subscriptions';
+import {
+  groupByRenewalDate,
+  scheduledRenewalTotalForMonth,
+  type RenewalGroup,
+} from '@/src/utils/subscriptions';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -48,6 +52,18 @@ export default function OverviewScreen() {
   const monthly = useMemo(() => monthlyTotal(currencyScope.included), [currencyScope.included]);
   const yearly = monthly * 12;
   const currency = currencyScope.currency;
+  const monthChange = useMemo(() => {
+    const now = new Date();
+    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const thisMonthTotal = scheduledRenewalTotalForMonth(currencyScope.included, now);
+    const previousMonthTotal = scheduledRenewalTotalForMonth(
+      currencyScope.included,
+      previousMonth,
+    );
+
+    if (previousMonthTotal === 0) return thisMonthTotal === 0 ? 0 : null;
+    return ((thisMonthTotal - previousMonthTotal) / previousMonthTotal) * 100;
+  }, [currencyScope.included]);
 
   const renewalGroups = useMemo(() => groupByRenewalDate(subs), [subs]);
   const upcomingGroups = useMemo(() => renewalGroups.slice(0, 5), [renewalGroups]);
@@ -95,6 +111,7 @@ export default function OverviewScreen() {
             yearly={yearly}
             currency={currency}
             activeCount={subs.length}
+            deltaPercent={monthChange}
             scopeNote={
               currencyScope.excludedCount > 0
                 ? `${currency} totals only · ${currencyScope.excludedCount} subscription${currencyScope.excludedCount === 1 ? '' : 's'} in ${currencyScope.excludedCurrencies.join(', ')} shown separately`

@@ -10,8 +10,8 @@ interface SpendingHeroProps {
   currency: string;
   activeCount: number;
   scopeNote?: string;
-  /** Illustrative month-over-month delta, e.g. 8.4. Omit to hide the pill. */
-  deltaPercent?: number;
+  /** Scheduled renewal change from last month. Null means no comparable base. */
+  deltaPercent?: number | null;
 }
 
 export function SpendingHero({
@@ -24,6 +24,16 @@ export function SpendingHero({
 }: SpendingHeroProps) {
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
+  const comparisonLabel =
+    deltaPercent === null
+      ? 'NO PRIOR TOTAL'
+      : deltaPercent === undefined
+        ? ''
+        : Math.abs(deltaPercent) < 0.05
+          ? 'NO CHANGE'
+          : deltaPercent > 0
+            ? 'MORE THAN LAST'
+            : 'LESS THAN LAST';
 
   return (
     <View style={styles.wrap}>
@@ -46,11 +56,15 @@ export function SpendingHero({
             <Text style={styles.metricValue}>{currency} {Math.round(yearly).toLocaleString('en-IN')}</Text>
             <Text style={styles.metricLabel}>12-MONTH TOTAL</Text>
           </View>
-          {typeof deltaPercent === 'number' ? <>
+          {deltaPercent !== undefined ? <>
             <View style={styles.rule} />
             <View style={styles.metric}>
-              <Text style={styles.metricValue}>{deltaPercent >= 0 ? '+' : ''}{deltaPercent.toFixed(1)}%</Text>
-              <Text style={styles.metricLabel}>CHANGE</Text>
+              <Text style={styles.metricValue}>
+                {deltaPercent === null
+                  ? '—'
+                  : `${Math.abs(deltaPercent) < 0.05 ? '0' : Math.abs(deltaPercent).toFixed(1)}%`}
+              </Text>
+              <Text style={styles.metricLabel}>{comparisonLabel}</Text>
             </View>
           </> : null}
         </View>

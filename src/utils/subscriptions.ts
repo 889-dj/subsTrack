@@ -34,6 +34,30 @@ export interface RenewalForecastPoint {
   count: number;
 }
 
+/**
+ * Scheduled charges in one calendar month, inferred from each saved renewal
+ * month and cadence. This is a commitment comparison, not payment history.
+ */
+export function scheduledRenewalTotalForMonth(
+  subs: Subscription[],
+  month: Date,
+): number {
+  const targetMonth = month.getFullYear() * 12 + month.getMonth();
+
+  return subs.reduce((total, sub) => {
+    const renewal = new Date(sub.nextRenewalDate);
+    if (Number.isNaN(renewal.getTime())) return total;
+
+    const renewalMonth = renewal.getFullYear() * 12 + renewal.getMonth();
+    const cadenceMonths = sub.billingCycle === 'yearly' ? 12 : 1;
+    const monthDistance = targetMonth - renewalMonth;
+    const occursThisMonth =
+      ((monthDistance % cadenceMonths) + cadenceMonths) % cadenceMonths === 0;
+
+    return occursThisMonth ? total + sub.cost : total;
+  }, 0);
+}
+
 function addRenewalCycle(date: Date, cycle: Subscription['billingCycle']): Date {
   const targetMonth = date.getMonth() + (cycle === 'monthly' ? 1 : 12);
   const lastDay = new Date(date.getFullYear(), targetMonth + 1, 0).getDate();
