@@ -15,3 +15,7 @@ export async function register(credentials: Credentials): Promise<AuthResponse> 
   const { data } = await http.post<AuthResponse>('/auth/register', credentials);
   return data;
 }
+
+export async function deleteAccount(): Promise<void> {
+  await http.delete('/auth/account');
+}

@@ -9,7 +9,10 @@ import { MultiRenewalSheet } from '@/src/components/MultiRenewalSheet';
 import { SectionHeader } from '@/src/components/SectionHeader';
 import { SkeletonList } from '@/src/components/SkeletonRow';
 import { SpendingHero } from '@/src/components/SpendingHero';
-import { SpendingTrendChart, type ChartVariant } from '@/src/components/SpendingTrendChart';
+import {
+  SpendingTrendChart,
+  type ForecastRange,
+} from '@/src/components/SpendingTrendChart';
 import { TAB_BAR_CLEARANCE } from '@/src/components/BottomNav';
 import { UpcomingPayment } from '@/src/components/UpcomingPayment';
 import { useAuth } from '@/src/hooks/useAuth';
@@ -18,15 +21,7 @@ import { useTheme } from '@/src/hooks/useTheme';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { gutter, space, type Palette, type TextStyles } from '@/src/theme';
 import { monthlyTotal } from '@/src/utils/money';
-import {
-  groupByRenewalDate,
-  synthesizeSpendTrend,
-  type RenewalGroup,
-} from '@/src/utils/subscriptions';
-
-const RANGES = ['1M', '3M', '6M', '1Y'] as const;
-type Range = (typeof RANGES)[number];
-const RANGE_POINTS: Record<Range, number> = { '1M': 6, '3M': 9, '6M': 12, '1Y': 12 };
+import { groupByRenewalDate, type RenewalGroup } from '@/src/utils/subscriptions';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -44,9 +39,8 @@ export default function OverviewScreen() {
   const { data, isLoading, isError, refetch, isRefetching } = useSubscriptions();
   const { onScroll } = useTabBarScroll();
 
-  const [range, setRange] = useState<Range>('6M');
-  const [chartVariant, setChartVariant] = useState<ChartVariant>('area');
   const [activeGroup, setActiveGroup] = useState<RenewalGroup | null>(null);
+  const [forecastRange, setForecastRange] = useState<ForecastRange>(6);
 
   const subs = useMemo(() => data ?? [], [data]);
   const monthly = useMemo(() => monthlyTotal(subs), [subs]);
@@ -56,19 +50,6 @@ export default function OverviewScreen() {
   const renewalGroups = useMemo(() => groupByRenewalDate(subs), [subs]);
   const upcomingGroups = useMemo(() => renewalGroups.slice(0, 5), [renewalGroups]);
 
-  const trend = useMemo(() => synthesizeSpendTrend(subs, RANGE_POINTS[range]), [subs, range]);
-
-  // Illustrative delta only — there's no real spend history in the mock
-  // backend, so this is derived deterministically from the trend rather than
-  // fabricated with a random number each render.
-  const deltaPercent = useMemo(() => {
-    if (trend.length < 2) return undefined;
-    const prev = trend[trend.length - 2];
-    if (!prev) return undefined;
-    return ((trend[trend.length - 1] - prev) / prev) * 100;
-  }, [trend]);
-
-  const name = user?.email?.split('@')[0] || 'there';
   const isEmpty = !isLoading && subs.length === 0;
 
   return (
@@ -88,7 +69,7 @@ export default function OverviewScreen() {
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.eyebrow}>{greeting()}</Text>
-          <Text style={t.heading} numberOfLines={1}>{name}'s overview</Text>
+          <Text style={t.heading} numberOfLines={1}>Your subscriptions</Text>
         </View>
         <View style={styles.headerActions}>
           <Pressable
@@ -111,7 +92,6 @@ export default function OverviewScreen() {
             yearly={yearly}
             currency={currency}
             activeCount={subs.length}
-            deltaPercent={deltaPercent}
           />
 
           {isError ? <Text style={styles.error}>Couldn't refresh — showing the last data.</Text> : null}
@@ -149,30 +129,16 @@ export default function OverviewScreen() {
             <Text style={t.caption}>Nothing scheduled right now.</Text>
           )}
 
-          <View style={styles.spendingHeader}>
-            <Text style={t.section}>Spending</Text>
-            <View style={styles.segmented}>
-              {RANGES.map((r) => (
-                <Pressable
-                  key={r}
-                  onPress={() => setRange(r)}
-                  style={[styles.segment, range === r && styles.segmentActive]}
-                >
-                  <Text style={[styles.segmentText, range === r && styles.segmentTextActive]}>
-                    {r}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
+          <SectionHeader label="Renewal forecast" />
           {subs.length > 0 ? (
             <SpendingTrendChart
-              trend={trend}
-              variant={chartVariant}
-              onVariantChange={setChartVariant}
+              subscriptions={subs}
+              currency={currency}
+              months={forecastRange}
+              onMonthsChange={setForecastRange}
             />
           ) : (
-            <Text style={t.caption}>Add a subscription to see your trend.</Text>
+            <Text style={t.caption}>Add a subscription to see your forecast.</Text>
           )}
 
         </>
@@ -230,32 +196,5 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     upcomingRow: {
       gap: space.sm,
       paddingRight: gutter,
-    },
-    spendingHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginTop: space.xl,
-    },
-    segmented: {
-      flexDirection: 'row',
-      backgroundColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.paper2,
-      borderRadius: 10,
-      padding: 2,
-    },
-    segment: {
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 8,
-    },
-    segmentActive: {
-      backgroundColor: colors.indigo,
-    },
-    segmentText: {
-      fontSize: 11,
-      color: colors.muted,
-    },
-    segmentTextActive: {
-      color: colors.white,
     },
   });

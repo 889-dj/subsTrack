@@ -1,100 +1,193 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { AreaChart, BarChart, LineChart } from 'panelui-native';
-import { Icon, type IconName } from '@/src/components/Icon';
+import { BarChart, Menu, type BarChartDatum } from 'panelui-native';
+import { AmountText } from '@/src/components/AmountText';
+import { Icon } from '@/src/components/Icon';
 import { useTheme } from '@/src/hooks/useTheme';
-import { radius, space, type Palette } from '@/src/theme';
+import { font, radius, space, type Palette, type TextStyles } from '@/src/theme';
+import { CURRENCIES, type Subscription } from '@/src/types';
+import { formatMoney } from '@/src/utils/money';
+import { renewalForecast, type RenewalForecastPoint } from '@/src/utils/subscriptions';
 
-export type ChartVariant = 'bar' | 'area' | 'line';
-
-const VARIANTS: { value: ChartVariant; icon: IconName }[] = [
-  { value: 'area', icon: 'trending-up' },
-  { value: 'bar', icon: 'chart' },
-  { value: 'line', icon: 'chart' },
-];
+export type ForecastRange = 3 | 6 | 12;
 
 interface SpendingTrendChartProps {
-  trend: number[];
-  variant: ChartVariant;
-  onVariantChange: (variant: ChartVariant) => void;
+  subscriptions: Subscription[];
+  currency: string;
+  months: ForecastRange;
+  onMonthsChange: (months: ForecastRange) => void;
 }
 
-/**
- * One trend, three readings of it. Bar/area/line all read off the same
- * `panelui-native` chart primitives so switching between them is a genuine
- * re-plot, not three different libraries pretending to agree.
- */
-export function SpendingTrendChart({ trend, variant, onVariantChange }: SpendingTrendChartProps) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+type ForecastDatum = RenewalForecastPoint & BarChartDatum;
 
+const RANGE_OPTIONS: { value: ForecastRange; label: string }[] = [
+  { value: 3, label: 'Next 3 months' },
+  { value: 6, label: 'Next 6 months' },
+  { value: 12, label: 'Next 12 months' },
+];
+
+/** Future renewal charges by calendar month, based on each saved cadence. */
+export function SpendingTrendChart({
+  subscriptions,
+  currency,
+  months,
+  onMonthsChange,
+}: SpendingTrendChartProps) {
+  const { colors, text: t } = useTheme();
+  const styles = useMemo(() => createStyles(colors, t), [colors, t]);
+  const [active, setActive] = useState<ForecastDatum | null>(null);
   const data = useMemo(
-    () => trend.map((amount, i) => ({ x: String(i + 1), amount })),
-    [trend]
+    () => renewalForecast(subscriptions, months) as ForecastDatum[],
+    [subscriptions, months],
   );
+  const periodTotal = data.reduce((sum, point) => sum + point.amount, 0);
+  const renewalCount = data.reduce((sum, point) => sum + point.count, 0);
+  const selectedRange = RANGE_OPTIONS.find((option) => option.value === months) ?? RANGE_OPTIONS[1];
+  const currencySymbol = CURRENCIES.find((option) => option.code === currency)?.symbol ?? currency;
+
+  const formatAxis = (value: number) => {
+    if (value >= 1000) {
+      const compact = value >= 10_000 ? Math.round(value / 1000) : (value / 1000).toFixed(1);
+      return `${currencySymbol}${compact}k`;
+    }
+    return `${currencySymbol}${Math.round(value)}`;
+  };
 
   return (
-    <View style={styles.wrap}>
-      <View style={styles.switcher}>
-        {VARIANTS.map((v) => (
-          <Pressable
-            key={v.value}
-            onPress={() => onVariantChange(v.value)}
-            style={[styles.switchItem, variant === v.value && styles.switchItemActive]}
-          >
-            <Icon
-              name={v.value === 'line' ? 'trending-up' : v.icon}
-              size={13}
-              color={variant === v.value ? colors.indigo : colors.muted}
-            />
-          </Pressable>
-        ))}
+    <View style={styles.card}>
+      <View style={styles.header}>
+        <View style={styles.headerCopy}>
+          <Text style={styles.kicker}>RENEWAL FORECAST</Text>
+          <Text style={styles.caption}>Charges expected by month</Text>
+        </View>
+        <Menu>
+          <Menu.Trigger>
+            <Pressable
+              style={({ pressed }) => [styles.rangeButton, pressed && styles.rangeButtonPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={`Change timeframe, ${selectedRange.label}`}
+            >
+              <Text style={styles.rangeButtonText}>{months}M</Text>
+              <Icon name="chevron-down" size={15} color={colors.muted} />
+            </Pressable>
+          </Menu.Trigger>
+          <Menu.Content align="end">
+            <Menu.Label>Forecast timeframe</Menu.Label>
+            <Menu.RadioGroup
+              value={String(months)}
+              onValueChange={(value) => {
+                setActive(null);
+                onMonthsChange(Number(value) as ForecastRange);
+              }}
+            >
+              {RANGE_OPTIONS.map((option) => (
+                <Menu.RadioItem key={option.value} value={String(option.value)}>
+                  {option.label}
+                </Menu.RadioItem>
+              ))}
+            </Menu.RadioGroup>
+          </Menu.Content>
+        </Menu>
       </View>
 
-      {variant === 'bar' ? (
-        <BarChart data={data} xDataKey="x" aspectRatio={2.3} compact animationDuration={420}>
-          <BarChart.Bar dataKey="amount" colorIndex={1} cornerRadius={4} />
-        </BarChart>
-      ) : variant === 'area' ? (
-        <AreaChart data={data} xDataKey="x" aspectRatio={2.3} compact animationDuration={420}>
-          <AreaChart.Area dataKey="amount" colorIndex={1} showLine strokeWidth={2} />
-        </AreaChart>
-      ) : (
-        <LineChart data={data} xDataKey="x" aspectRatio={2.3} compact animationDuration={420}>
-          <LineChart.Area dataKey="amount" colorIndex={1} />
-          <LineChart.Line dataKey="amount" colorIndex={1} />
-        </LineChart>
-      )}
+      <View style={styles.readout}>
+        <View style={styles.readoutCopy}>
+          <Text style={styles.readoutLabel}>{active ? active.label : 'Selected period'}</Text>
+          <Text style={styles.readoutHint}>
+            {active
+              ? `${active.count} renewal${active.count === 1 ? '' : 's'}`
+              : `${renewalCount} renewals forecast`}
+          </Text>
+        </View>
+        <AmountText
+          value={active ? active.amount : periodTotal}
+          currency={currency}
+          size={20}
+        />
+      </View>
+
+      <BarChart
+        data={data}
+        xDataKey="label"
+        aspectRatio={1.72}
+        barGap={months === 12 ? 0.32 : 0.42}
+        animationDuration={520}
+        fadedOpacity={0.28}
+        onActiveIndexChange={(_index, datum) => setActive(datum as ForecastDatum | null)}
+        accessibilityLabel={`Renewal forecast for the next ${months} months`}
+        accessibilityHint="Swipe through the chart to hear each month's projected charges."
+        accessibilityLabelForDatum={(datum) =>
+          `${datum.label}, ${formatMoney(Number(datum.amount), currency)}, ${datum.count} renewals`
+        }
+      >
+        <BarChart.Grid rows={3} color={colors.hairline} dashArray="3,6" />
+        <BarChart.Bar dataKey="amount" color={colors.indigo} cornerRadius={6} />
+        <BarChart.XAxis ticks={months > 6 ? 6 : months} />
+        <BarChart.YAxis ticks={3} format={formatAxis} />
+        <BarChart.Tooltip
+          formatX={(datum) => String(datum.label)}
+          formatValue={(value) => formatMoney(value, currency)}
+        />
+      </BarChart>
+
+      <Text style={styles.footnote}>Drag across the bars to inspect a month.</Text>
     </View>
   );
 }
 
-const createStyles = (colors: Palette) =>
+const createStyles = (colors: Palette, t: TextStyles) =>
   StyleSheet.create({
-    wrap: {
+    card: {
       backgroundColor: colors.surface,
       borderRadius: radius.card,
       borderWidth: 1,
       borderColor: colors.hairline,
-      padding: space.md,
+      padding: space.lg,
     },
-    switcher: {
+    header: {
       flexDirection: 'row',
-      alignSelf: 'flex-end',
-      gap: 2,
-      backgroundColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.paper2,
-      borderRadius: 10,
-      padding: 2,
-      marginBottom: space.sm,
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      gap: space.sm,
+      marginBottom: space.lg,
     },
-    switchItem: {
-      width: 28,
-      height: 24,
+    headerCopy: { flex: 1, paddingBottom: 2 },
+    kicker: {
+      fontFamily: font.monoMed,
+      fontSize: 10,
+      letterSpacing: 1,
+      color: colors.muted,
+    },
+    caption: { ...t.caption, marginTop: 3 },
+    rangeButton: {
+      minWidth: 74,
+      minHeight: 40,
+      paddingHorizontal: space.md,
+      borderRadius: radius.cardSm,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      backgroundColor: colors.paper2,
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 8,
+      gap: space.xs,
     },
-    switchItemActive: {
-      backgroundColor: colors.indigoBg,
+    rangeButtonPressed: { opacity: 0.7 },
+    rangeButtonText: { ...t.amount, fontSize: 13 },
+    readout: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: space.md,
+      paddingBottom: space.sm,
+    },
+    readoutCopy: { flex: 1 },
+    readoutLabel: { ...t.section },
+    readoutHint: { ...t.caption, marginTop: 2 },
+    footnote: {
+      ...t.caption,
+      fontSize: 11,
+      textAlign: 'center',
+      marginTop: space.xs,
     },
   });

@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { PieChart, type PieDatum } from 'panelui-native';
 import { AmountText } from '@/src/components/AmountText';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font, radius, space, type Palette, type TextStyles } from '@/src/theme';
@@ -9,18 +10,28 @@ interface CategoryBreakdownProps {
   currency: string;
 }
 
-/**
- * Theme-aware category ledger. Exact values remain readable with large text
- * and in dark mode; the proportional rail preserves the at-a-glance view.
- */
+/** Interactive category donut with its readout outside the constrained centre. */
 export function CategoryBreakdown({ entries, currency }: CategoryBreakdownProps) {
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const total = useMemo(() => entries.reduce((sum, entry) => sum + entry.amount, 0), [entries]);
   const accents = [colors.indigo, colors.cyan, colors.pink, colors.warning, colors.saved];
+  const data = useMemo<PieDatum[]>(
+    () =>
+      entries.map((entry, index) => ({
+        label: entry.category,
+        value: entry.amount,
+        color: accents[index % accents.length],
+      })),
+    [entries, accents],
+  );
+  const focusedIndex = activeIndex >= 0 ? activeIndex : 0;
+  const focused = entries[focusedIndex];
+  const focusedPercent = focused && total > 0 ? Math.round((focused.amount / total) * 100) : 0;
 
   return (
-    <View style={styles.card} accessibilityRole="summary">
+    <View style={styles.card}>
       <View style={styles.totalRow}>
         <View>
           <Text style={styles.totalLabel}>ANNUAL TOTAL</Text>
@@ -29,36 +40,55 @@ export function CategoryBreakdown({ entries, currency }: CategoryBreakdownProps)
         <AmountText value={total} currency={currency} size={22} />
       </View>
 
-      <View style={styles.track} accessibilityElementsHidden>
-        {entries.map((entry, index) => {
-          const percent = total > 0 ? (entry.amount / total) * 100 : 0;
-          return (
-            <View
-              key={entry.category}
-              style={[
-                styles.segment,
-                { flex: Math.max(percent, 2), backgroundColor: accents[index % accents.length] },
-              ]}
-            />
-          );
-        })}
+      <View style={styles.chartRow}>
+        <PieChart
+          data={data}
+          size={156}
+          innerRadius={0.62}
+          padAngle={2}
+          minAngle={2}
+          animationDuration={560}
+          activeIndex={activeIndex}
+          onActiveIndexChange={setActiveIndex}
+          accessibilityLabel="Annual subscription spending by category"
+        >
+          <PieChart.Slices cornerRadius={4} popOut={5} dimOpacity={0.3} />
+        </PieChart>
+
+        {focused ? (
+          <View style={styles.focusReadout} accessible>
+            <Text style={styles.focusKicker}>
+              {activeIndex >= 0 ? 'SELECTED' : 'LARGEST SHARE'}
+            </Text>
+            <Text style={styles.focusName} numberOfLines={2}>{focused.category}</Text>
+            <AmountText value={focused.amount} currency={currency} size={18} />
+            <Text style={styles.focusPercent}>{focusedPercent}% of annual spend</Text>
+          </View>
+        ) : null}
       </View>
 
-      <View style={styles.list}>
+      <View style={styles.list} accessibilityRole="list">
         {entries.map((entry, index) => {
           const percent = total > 0 ? Math.round((entry.amount / total) * 100) : 0;
+          const selected = activeIndex === index;
           return (
-            <View
+            <Pressable
               key={entry.category}
-              style={styles.row}
-              accessible
+              style={({ pressed }) => [
+                styles.row,
+                selected && styles.rowSelected,
+                pressed && styles.rowPressed,
+              ]}
+              onPress={() => setActiveIndex(selected ? -1 : index)}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
               accessibilityLabel={`${entry.category}, ${percent} percent, ${Math.round(entry.amount)} ${currency} per year`}
             >
               <View style={[styles.swatch, { backgroundColor: accents[index % accents.length] }]} />
               <Text style={styles.category} numberOfLines={1}>{entry.category}</Text>
               <Text style={styles.percent}>{percent}%</Text>
               <AmountText value={entry.amount} currency={currency} size={13} />
-            </View>
+            </Pressable>
           );
         })}
       </View>
@@ -88,23 +118,39 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       color: colors.muted,
     },
     totalHint: { ...t.caption, marginTop: 3 },
-    track: {
-      flexDirection: 'row',
-      height: 10,
-      borderRadius: radius.chip,
-      overflow: 'hidden',
-      gap: 2,
+    chartRow: {
+      minHeight: 172,
       marginVertical: space.lg,
-      backgroundColor: colors.paper2,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: space.lg,
     },
-    segment: { height: '100%' },
-    list: { gap: space.md },
+    focusReadout: { flex: 1, alignItems: 'flex-start' },
+    focusKicker: {
+      ...t.label,
+      fontSize: 9,
+      lineHeight: 12,
+      marginBottom: space.xs,
+    },
+    focusName: {
+      ...t.title,
+      fontSize: 16,
+      lineHeight: 21,
+      marginBottom: space.xs,
+    },
+    focusPercent: { ...t.caption, fontSize: 11, marginTop: space.xs },
+    list: { gap: space.xs },
     row: {
-      minHeight: 28,
+      minHeight: 44,
+      borderRadius: radius.cardSm,
+      paddingHorizontal: space.sm,
       flexDirection: 'row',
       alignItems: 'center',
       gap: space.sm,
     },
+    rowSelected: { backgroundColor: colors.indigoBg },
+    rowPressed: { opacity: 0.72 },
     swatch: { width: 9, height: 9, borderRadius: 3 },
     category: { ...t.body, flex: 1, fontSize: 14 },
     percent: {

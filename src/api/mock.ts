@@ -11,7 +11,7 @@ interface StoredUser extends User {
   password: string;
 }
 
-const users: StoredUser[] = [];
+let users: StoredUser[] = [];
 
 /** ISO date `daysFromNow` days from "today", at a fixed time so renders are stable. */
 function inDays(daysFromNow: number): string {
@@ -176,6 +176,15 @@ export function setupMockApi(): void {
     if (!user) return [401, { message: 'Invalid email or password.' }];
     const response: AuthResponse = { token: tokenFor(user), user: { id: user.id, email: user.email } };
     return [200, response];
+  });
+
+  mock.onDelete('/auth/account').reply((config) => {
+    const userId = userIdFromToken(config.headers?.Authorization);
+    if (!userId) return [401, { message: 'Not authenticated.' }];
+    const exists = users.some((user) => user.id === userId);
+    if (!exists) return [404, { message: 'Account not found.' }];
+    users = users.filter((user) => user.id !== userId);
+    return [204];
   });
 
   mock.onGet('/subscriptions').reply((config) => {

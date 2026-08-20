@@ -27,6 +27,76 @@ export interface RenewalGroup {
   total: number;
 }
 
+export interface RenewalForecastPoint {
+  monthKey: string;
+  label: string;
+  amount: number;
+  count: number;
+}
+
+function addRenewalCycle(date: Date, cycle: Subscription['billingCycle']): Date {
+  const targetMonth = date.getMonth() + (cycle === 'monthly' ? 1 : 12);
+  const lastDay = new Date(date.getFullYear(), targetMonth + 1, 0).getDate();
+  return new Date(
+    date.getFullYear(),
+    targetMonth,
+    Math.min(date.getDate(), lastDay),
+    12,
+  );
+}
+
+/**
+ * Actual charges expected in each future calendar month, derived from the
+ * stored renewal date and billing cadence. This is a forecast, not invented
+ * transaction history.
+ */
+export function renewalForecast(
+  subs: Subscription[],
+  months: number,
+  from = new Date(),
+): RenewalForecastPoint[] {
+  const start = new Date(from.getFullYear(), from.getMonth(), 1);
+  const end = new Date(start.getFullYear(), start.getMonth() + months, 1);
+  const points = Array.from({ length: months }, (_, index) => {
+    const month = new Date(start.getFullYear(), start.getMonth() + index, 1);
+    return {
+      monthKey: `${month.getFullYear()}-${month.getMonth()}`,
+      label: month.toLocaleDateString('en-IN', { month: 'short' }),
+      amount: 0,
+      count: 0,
+    };
+  });
+
+  for (const sub of subs) {
+    let renewal = new Date(sub.nextRenewalDate);
+    if (Number.isNaN(renewal.getTime())) continue;
+
+    // Old renewal dates can remain in local/mock data. Roll them forward to
+    // the visible window without ever fabricating a charge in the past.
+    let guard = 0;
+    while (renewal < start && guard < 240) {
+      renewal = addRenewalCycle(renewal, sub.billingCycle);
+      guard += 1;
+    }
+
+    while (renewal < end && guard < 300) {
+      const index =
+        (renewal.getFullYear() - start.getFullYear()) * 12 +
+        renewal.getMonth() -
+        start.getMonth();
+      const point = points[index];
+      if (point) {
+        point.amount += sub.cost;
+        point.count += 1;
+      }
+      renewal = addRenewalCycle(renewal, sub.billingCycle);
+      guard += 1;
+    }
+  }
+
+  return points;
+}
+
 /**
  * Subscriptions grouped by calendar day of next renewal, sorted by date. This
  * is the source of truth for both the multi-renewal badge on Overview/
@@ -91,34 +161,6 @@ export function longDate(iso: string): string {
     month: 'short',
     year: 'numeric',
   });
-}
-
-/**
- * A plausible cumulative-spend trend ending at the current monthly total —
- * there's no real spend history in the mock backend, so this synthesizes a
- * gently rising curve seeded from the subscription count so it varies
- * per-account without being random on every render.
- */
-export function synthesizeSpendTrend(subs: Subscription[], points = 12): number[] {
-  const total = monthlyTotal(subs);
-  if (total <= 0 || subs.length === 0) return Array(points).fill(0);
-
-  let seed = subs.reduce((acc, s) => acc + s.name.length + s.cost, 7);
-  const rand = () => {
-    seed = (seed * 9301 + 49297) % 233280;
-    return seed / 233280;
-  };
-
-  const values: number[] = [];
-  for (let i = 0; i < points; i++) {
-    const progress = (i + 1) / points;
-    // Rising curve with a touch of noise, always ending exactly at `total`.
-    const base = total * (0.35 + 0.65 * progress);
-    const noise = (rand() - 0.5) * total * 0.08;
-    values.push(Math.max(total * 0.15, base + noise));
-  }
-  values[values.length - 1] = total;
-  return values;
 }
 
 /** Synthesized past charges for the detail screen — cadence derived from billing cycle. */

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Uniwind } from 'uniwind';
 import {
   createHairlineBorder,
   createTextStyles,
@@ -51,6 +52,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const resolvedMode: ThemeMode = mode === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : mode;
   const colors = palettes[resolvedMode];
+
+  useEffect(() => {
+    if (loaded) Uniwind.setTheme(mode);
+  }, [loaded, mode]);
 
   const value = useMemo<ThemeContextValue>(
     () => ({

@@ -39,9 +39,6 @@ export default function CalendarScreen() {
   const [selected, setSelected] = useState<Date | null>(null);
   const selectedKey = selected ? dayKey(selected) : null;
   const selectedGroup = selectedKey ? groupMap.get(selectedKey) : undefined;
-  const now = new Date();
-  const isCurrentMonth =
-    month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
   const monthGroups = useMemo(
     () =>
       groups.filter(
@@ -55,13 +52,6 @@ export default function CalendarScreen() {
   function shiftMonth(delta: number) {
     setMonth((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
     setSelected(null);
-  }
-
-  function goToday() {
-    const d = new Date();
-    d.setDate(1);
-    setMonth(d);
-    setSelected(new Date());
   }
 
   return (
@@ -90,16 +80,6 @@ export default function CalendarScreen() {
           >
             <Icon name="chevron-back" size={16} color={colors.ink} />
           </Pressable>
-          {!isCurrentMonth ? (
-            <Pressable
-              onPress={goToday}
-              style={styles.todayButton}
-              accessibilityRole="button"
-              accessibilityLabel="Return to current month"
-            >
-              <Text style={styles.todayText}>Today</Text>
-            </Pressable>
-          ) : null}
           <Pressable
             onPress={() => shiftMonth(1)}
             style={styles.monthButton}
@@ -216,19 +196,6 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.paper2,
-    },
-    todayButton: {
-      minHeight: 44,
-      paddingHorizontal: space.md,
-      borderRadius: radius.chip,
-      backgroundColor: colors.indigoBg,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    todayText: {
-      ...t.caption,
-      color: colors.indigo,
-      fontSize: 11.5,
     },
     calendarCard: {
       backgroundColor: colors.surface,

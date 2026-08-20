@@ -15,6 +15,7 @@ import {
   ChartUpIcon,
   CheckmarkCircle02Icon,
   FlashIcon,
+  Home01Icon,
   InformationCircleIcon,
   Notification03Icon,
   PieChart02Icon,
@@ -49,7 +50,7 @@ const ICONS = {
   'trending-up': ChartUpIcon,
   'trending-down': ChartDownIcon,
   add: Add01Icon,
-  home: BookOpen02Icon, // placeholder, overridden per-tab in BottomNav
+  home: Home01Icon,
   wallet: Wallet01Icon,
   calendar: Calendar03Icon,
   chart: AnalyticsUpIcon,

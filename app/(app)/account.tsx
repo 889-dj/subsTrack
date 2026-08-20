@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,11 +32,12 @@ const APPEARANCE_OPTIONS: { value: ThemeModePreference; label: string }[] = [
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
   const { isPro, managementUrl } = usePurchases();
   const { data: subscriptions } = useSubscriptions();
   const { colors, text: t, mode, setMode } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const subs = useMemo(() => subscriptions ?? [], [subscriptions]);
 
@@ -56,6 +57,32 @@ export default function AccountScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Log out', style: 'destructive', onPress: () => logout() },
     ]);
+  }
+
+  function handleDeleteAccount() {
+    Alert.alert(
+      'Delete your account?',
+      'This permanently deletes your account and tracked subscriptions. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete account',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              await deleteAccount();
+            } catch (error: any) {
+              setIsDeleting(false);
+              Alert.alert(
+                'Could not delete account',
+                error?.response?.data?.message ?? 'Please check your connection and try again.',
+              );
+            }
+          },
+        },
+      ],
+    );
   }
 
   function handlePlanPress() {
@@ -180,8 +207,19 @@ export default function AccountScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Pressable onPress={handleLogout} hitSlop={8}>
+        <Pressable onPress={handleLogout} hitSlop={8} disabled={isDeleting}>
           <Text style={styles.logout}>Log out</Text>
+        </Pressable>
+        <Pressable
+          onPress={handleDeleteAccount}
+          hitSlop={8}
+          disabled={isDeleting}
+          accessibilityRole="button"
+          accessibilityLabel="Delete account permanently"
+        >
+          <Text style={[styles.deleteAccount, isDeleting && styles.actionDisabled]}>
+            {isDeleting ? 'Deleting account…' : 'Delete account'}
+          </Text>
         </Pressable>
         <Text style={styles.version}>subsTrack · 1.0.0</Text>
       </View>
@@ -425,7 +463,15 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     logout: {
       fontFamily: font.sansMed,
       fontSize: 14,
+      color: colors.ink,
+    },
+    deleteAccount: {
+      fontFamily: font.sansMed,
+      fontSize: 14,
       color: colors.debit,
+    },
+    actionDisabled: {
+      opacity: 0.55,
     },
     version: {
       fontFamily: font.mono,
