@@ -51,3 +51,23 @@ export function useDeleteSubscription() {
     },
   });
 }
+
+function useStatusMutation(action: 'pause' | 'resume') {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      action === 'pause' ? api.pauseSubscription(id) : api.resumeSubscription(id),
+    onSuccess: (updated: Subscription) => {
+      queryClient.invalidateQueries({ queryKey: subscriptionsKey });
+      queryClient.setQueryData(subscriptionKey(updated.id), updated);
+    },
+  });
+}
+
+export function usePauseSubscription() {
+  return useStatusMutation('pause');
+}
+
+export function useResumeSubscription() {
+  return useStatusMutation('resume');
+}

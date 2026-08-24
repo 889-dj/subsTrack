@@ -56,7 +56,22 @@ eas env:set --name EXPO_PUBLIC_REVENUECAT_IOS_KEY --value appl_xxx --environment
 
 Repeat for `preview` and `production`.
 
-## 4. Build
+## 4. Backend synchronization and deletion
+
+The production backend projects the `pro` entitlement from RevenueCat webhooks
+and deletes RevenueCat customer data during in-app account deletion. Configure:
+
+1. A RevenueCat webhook at
+   `https://<your-api-domain>/api/webhooks/revenuecat`.
+2. A strong authorization value in the RevenueCat webhook settings, then store
+   that same value as `REVENUECAT_WEBHOOK_SECRET` on the backend.
+3. A secret RevenueCat REST API key as `REVENUECAT_SECRET_API_KEY` on the
+   backend. Never place this key in an `EXPO_PUBLIC_` variable.
+
+The app identifies RevenueCat users with the signed-in Clerk user id. Do not
+replace that id with an email address or an anonymous shared id.
+
+## 5. Build
 
 `react-native-purchases` is a native module, so it only works in a build made after
 it was installed — Expo Go and older dev clients will show the "Not available in this
@@ -64,6 +79,7 @@ build" notice:
 
 ```sh
 npm run build:dev:android
+npm run build:dev:ios
 ```
 
 ## Testing purchases

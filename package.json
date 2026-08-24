@@ -1,8 +1,10 @@
 {
   "name": "substrack",
   "version": "1.0.0",
+  "packageManager": "npm@11.12.1",
   "main": "expo-router/entry",
   "dependencies": {
+    "@clerk/expo": "^4.5.3",
     "@expo-google-fonts/geist": "^0.4.2",
     "@expo-google-fonts/geist-mono": "^0.4.3",
     "@expo/vector-icons": "^15.0.2",
@@ -14,14 +16,13 @@
     "@tanstack/react-query": "^5.101.4",
     "axios": "^1.19.0",
     "axios-mock-adapter": "^2.1.0",
-    "expo": "~57.0.9",
+    "expo": "~57.0.16",
     "expo-constants": "~57.0.8",
-    "expo-dev-client": "~57.0.10",
-    "expo-document-picker": "~57.0.1",
+    "expo-dev-client": "~57.0.15",
     "expo-font": "^57.0.1",
     "expo-linear-gradient": "~57.0.1",
-    "expo-linking": "~57.0.4",
-    "expo-router": "~57.0.9",
+    "expo-linking": "~57.0.7",
+    "expo-router": "~57.0.16",
     "expo-secure-store": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.2",
@@ -45,12 +46,18 @@
     "patch-package": "^8.0.1",
     "typescript": "~6.0.3"
   },
+  "overrides": {
+    "metro": "0.84.5",
+    "metro-config": "0.84.5",
+    "metro-transform-worker": "0.84.5"
+  },
   "scripts": {
     "postinstall": "patch-package",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
     "prebuild": "expo prebuild",
     "build:dev": "eas build --profile development --platform all",
     "build:dev:android": "eas build --profile development --platform android",

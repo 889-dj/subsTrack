@@ -1,12 +1,11 @@
 # subsTrack
 
-A React Native (Expo) mobile app for tracking recurring subscriptions.
+A React Native (Expo) mobile app for manually tracking recurring subscriptions,
+renewal dates, recurring commitments, and spending forecasts.
 
-The differentiator is **statement scanning**: instead of only typing subscriptions
-in by hand, the user uploads a bank statement (PDF/CSV) and the backend parses it,
-groups transactions into recurring charges, and returns them as *detections* with a
-confidence score. The user reviews and corrects those detections, and the ones they
-keep become tracked subscriptions.
+There is no statement-upload, bank-document parsing, AI-detection, or device
+digital-wellbeing feature in the current product. Do not add those flows unless
+the product scope is explicitly changed in a future request.
 
 **Current goal: ship to the App Store and Play Store.** Decisions should be weighed
 against that, not against "make the demo look good".
@@ -24,44 +23,44 @@ most training data describes.
 
 ## The one thing to know first
 
-**There is no backend.** `setupMockApi()` is called unconditionally in
-`app/_layout.tsx`, and `axios-mock-adapter` intercepts every request. All auth,
-subscriptions, statement parsing and AI detection are simulated in
-`src/api/mock.ts` — including fake progress and fake detections.
+The production backend lives beside this repository at `../subsTrack-backend`.
+It is a Fastify/TypeScript/PostgreSQL service with Clerk authentication,
+subscription CRUD, per-currency analytics, RevenueCat entitlement projection,
+webhooks, and durable account deletion. The full contract is in
+`docs/backend-prd.md`; its OpenAPI file is in the backend repository.
+
+`setupMockApi()` is still called from `app/_layout.tsx`, but the mock adapter only
+activates when `EXPO_PUBLIC_USE_MOCK_API` is not `false`. This keeps UI development
+available without intercepting production requests.
 
 The mock deliberately mirrors the REST contract a real backend would expose, so
 switching over is configuration only:
 
 ```
 EXPO_PUBLIC_USE_MOCK_API=false
-EXPO_PUBLIC_API_URL=https://<real-backend>
+EXPO_PUBLIC_API_URL=https://<real-backend>/v1
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
 ```
 
 No hook or screen changes when that happens. **Keep it that way** — if you add an
 endpoint, add it to both the typed client in `src/api/` and the mock, and never let
 screens reach around the client.
 
-> **Open question — backend is undecided.** Whether this ships with a real
-> server (and who builds it) has not been settled. It is the single largest
-> unknown blocking store release, because statement parsing and AI detection
-> cannot run purely on-device as designed. Revisit before committing to a
-> launch date.
-
-### The REST contract (defined by the mock, spec for any real backend)
+### The mobile REST contract
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/auth/register`, `/auth/login` | Returns `{ token, user }` |
-| `GET` | `/subscriptions` | List |
+| `GET` | `/me` | Authenticated profile + entitlement projection |
+| `GET` | `/subscriptions` | `{ items, nextCursor }` |
 | `POST` | `/subscriptions` | Create |
 | `GET` `PATCH` `DELETE` | `/subscriptions/:id` | Read / update / remove |
-| `POST` | `/statements` | Multipart upload; returns immediately, work is async |
-| `GET` | `/statements/:id` | Poll for `status` + `progress` |
-| `GET` | `/statements/:id/detections` | Detected recurring charges |
-| `POST` | `/statements/:id/confirm` | Turn kept detections into subscriptions |
+| `POST` | `/subscriptions/:id/pause`, `/resume` | Status changes |
+| `GET` | `/analytics/spend-trend`, `/analytics/overview` | Per-currency analytics |
+| `DELETE` | `/account` | Permanent account deletion |
 
-Statement lifecycle: `uploading → parsing → analyzing → ready`, or `failed`.
-The client polls `GET /statements/:id` and drives the progress UI from it.
+In production, Clerk owns registration/login and supplies rotating session JWTs;
+there are no backend password endpoints. Mock mode retains local `/auth/*` routes
+only to support offline UI development.
 
 ---
 
@@ -72,18 +71,17 @@ app/                      expo-router file routes only — thin screens
   _layout.tsx             providers: SafeArea → QueryClient → Auth → Purchases
   (auth)/login.tsx        signed-out
   (app)/                  signed-in; redirects to (auth) without a token
-    (tabs)/               index (list) · upload (scan) · account
+    (tabs)/               overview · calendar · add · subscriptions · insights
     add.tsx  [id].tsx     create / detail-edit
-    review.tsx            confirm or correct AI detections
+    account.tsx           identity, appearance, plan and deletion controls
     paywall.tsx           RevenueCat plans
 src/
-  api/                    typed axios clients + mock adapter + token storage
-  hooks/                  useAuth, usePurchases (context); useSubscriptions,
-                          useStatements (React Query)
+  api/                    typed axios clients + mock adapter + token provider
+  hooks/                  Clerk/mock auth, purchases, subscriptions, theme
   components/             shared UI
   types.ts                all shared types live here
   theme.ts                colors / spacing / radius / typography / shadow
-  utils/                  money, filePicker
+  utils/                  money and renewal forecasting
 ```
 
 **Conventions**
@@ -92,9 +90,10 @@ src/
 - Server state is React Query. Don't hand-roll fetch-in-`useEffect`.
 - All shared types go in `src/types.ts`. Don't redeclare shapes locally.
 - Style from `src/theme.ts` tokens — no hardcoded hex, spacing or font sizes.
-- Auth tokens live in `expo-secure-store` (`src/api/tokenStorage.ts`), never
-  AsyncStorage.
-- App is light-mode only right now (`userInterfaceStyle: "light"`).
+- Clerk persists native sessions through its SecureStore token cache. Mock tokens
+  use `src/api/tokenStorage.ts`. Never put production tokens in AsyncStorage on
+  native platforms.
+- Light, dark, and system appearance modes are supported.
 
 ---
 
@@ -108,11 +107,11 @@ come from `.env` (see `.env.example`) — the secret key must never reach the bu
 user id, skips the `'restored'` placeholder id (otherwise every restored session
 would share one entitlement), and calls `forgetUser()` on sign-out.
 
-> **The paywall gates nothing, on purpose.** Purchase, restore and entitlement
+> **The paywall gates nothing yet.** Purchase, restore and entitlement
 > reads all work, but `isPro` is only used for *display* — the plan card in
 > `account.tsx` and the "you're subscribed" state in `paywall.tsx`. No feature is
-> locked. Deciding what Pro actually buys (statement scans per month? unlimited
-> subscriptions?) is an open product decision and a blocker for store release.
+> locked. Deciding the exact Free/Pro policy and ensuring every paywall promise
+> exists is still a product decision and a blocker for store release.
 
 Purchases require a **development build** — they do not work in Expo Go.
 
@@ -120,18 +119,19 @@ Purchases require a **development build** — they do not work in Expo Go.
 
 ## Status
 
-**Built:** email auth flow, subscription CRUD, categories, monthly/yearly cost
-math, statement upload + polling + progress UI, detection review screen, paywall,
-custom floating tab bar.
+**Built:** Clerk-backed email auth with verification, mock auth mode, subscription
+CRUD, categories, calendar-safe monthly/yearly math, per-currency forecasts,
+overview/insights, paywall, custom floating tab bar, backend webhooks, and durable
+account deletion.
 
 **Not built / undecided, in rough priority order for shipping:**
 
-1. Real backend — including actual PDF/CSV parsing and the AI detection model.
-2. What Pro unlocks, and enforcing it.
-3. Store listing assets, privacy policy, data-handling disclosure (bank statements
-   are sensitive — both stores will ask).
-4. No test suite and no linter are configured.
-5. Password reset, account deletion (Apple requires in-app account deletion).
+1. What Pro unlocks, enforcing it, and removing any unimplemented paywall claims.
+2. Production Clerk, RevenueCat, database, webhook, and API deployment values.
+3. Store listing assets, privacy policy, and accurate data-handling disclosures.
+4. Password reset UX.
+5. The mobile app has type checking but no UI test suite or linter yet. The
+   backend has unit/API tests and strict type checking.
 
 ---
 
@@ -140,9 +140,10 @@ custom floating tab bar.
 ```
 npm start                 dev server
 npm run android|ios|web   run on a platform
+npm run typecheck         TypeScript validation
 npm run build:dev         EAS development build (needed for RevenueCat)
 npm run build:prod        production build
 npm run submit:android|ios
 ```
 
-There is no test or lint script — don't claim to have run one.
+There is no mobile test or lint script — do not claim to have run either.

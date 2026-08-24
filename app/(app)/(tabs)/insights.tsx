@@ -32,6 +32,10 @@ export default function InsightsScreen() {
   const { onScroll } = useTabBarScroll();
 
   const subs = useMemo(() => data ?? [], [data]);
+  const activeSubs = useMemo(
+    () => subs.filter((subscription) => subscription.status === 'active'),
+    [subs],
+  );
   const currencyScope = useMemo(() => scopeSubscriptionsByCurrency(subs), [subs]);
   const scopedSubs = currencyScope.included;
   const monthly = useMemo(() => monthlyTotal(scopedSubs), [scopedSubs]);
@@ -40,10 +44,10 @@ export default function InsightsScreen() {
   const byCategory = useMemo(() => spendByCategory(scopedSubs), [scopedSubs]);
 
   const insights = useMemo(() => {
-    if (subs.length === 0) return [];
+    if (activeSubs.length === 0) return [];
     const list: { icon: IconName; title: string; body: string; accent: Accent }[] = [];
 
-    const soon = upcoming(subs, 5);
+    const soon = upcoming(activeSubs, 5);
     if (soon.length >= 2) {
       list.push({
         icon: 'flash',
@@ -91,7 +95,7 @@ export default function InsightsScreen() {
     }
 
     return list;
-  }, [subs, scopedSubs, monthly, byCategory, currency]);
+  }, [activeSubs, scopedSubs, monthly, byCategory, currency]);
 
   return (
     <Animated.ScrollView
@@ -110,7 +114,7 @@ export default function InsightsScreen() {
 
       {isLoading ? (
         <SkeletonList count={5} />
-      ) : subs.length === 0 ? (
+      ) : activeSubs.length === 0 ? (
         <EmptyState
           title="Nothing to analyse yet."
           subtitle="Add a few subscriptions and insights will show up here."

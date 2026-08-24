@@ -17,5 +17,5 @@ export async function register(credentials: Credentials): Promise<AuthResponse> 
 }
 
 export async function deleteAccount(): Promise<void> {
-  await http.delete('/auth/account');
+  await http.delete('/account');
 }

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -23,9 +24,18 @@ export default function LoginScreen() {
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login, register } = useAuth();
+  const {
+    login,
+    register,
+    verificationPending,
+    verificationEmail,
+    verifyEmail,
+    resendVerification,
+    cancelVerification,
+  } = useAuth();
   const router = useRouter();
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
@@ -41,14 +51,29 @@ export default function LoginScreen() {
     setSubmitting(true);
     try {
       const credentials = { email: email.trim(), password };
-      if (isRegister) {
-        await register(credentials);
-      } else {
-        await login(credentials);
-      }
-      router.replace('/');
+      const result = isRegister
+        ? await register(credentials)
+        : await login(credentials);
+      if (result === 'authenticated') router.replace('/');
     } catch (e: any) {
       setError(e?.message ?? 'Something went wrong. Try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleVerification() {
+    setError(null);
+    if (!verificationCode.trim()) {
+      setError('Enter the verification code from your email.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await verifyEmail(verificationCode.trim());
+      router.replace('/');
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not verify that code.');
     } finally {
       setSubmitting(false);
     }
@@ -60,55 +85,107 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={styles.wordmark}>SUBSTRACK</Text>
           <Text style={styles.title}>
-            {isRegister ? 'See every recurring charge in one place.' : 'Welcome back.'}
+            {verificationPending
+              ? 'Check your email.'
+              : isRegister
+                ? 'See every recurring charge in one place.'
+                : 'Welcome back.'}
           </Text>
           <Text style={styles.subtitle}>
-            {isRegister
-              ? 'Create an account to track renewal dates and recurring totals.'
-              : 'Your subscription ledger is ready.'}
+            {verificationPending
+              ? `Enter the code sent to ${verificationEmail ?? 'your email'}.`
+              : isRegister
+                ? 'Create an account to track renewal dates and recurring totals.'
+                : 'Your subscription ledger is ready.'}
           </Text>
 
           <View style={styles.form}>
-            <TextField
-              label="Email"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-            />
-            <TextField
-              label="Password"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-            />
+            {verificationPending ? (
+              <TextField
+                label="Verification code"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="number-pad"
+                textContentType="oneTimeCode"
+                value={verificationCode}
+                onChangeText={setVerificationCode}
+                placeholder="123456"
+              />
+            ) : (
+              <>
+                <TextField
+                  label="Email"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="you@example.com"
+                />
+                <TextField
+                  label="Password"
+                  secureTextEntry
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="••••••••"
+                />
+              </>
+            )}
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
             <Button
-              label={isRegister ? 'Create account' : 'Log in'}
-              onPress={handleSubmit}
+              label={verificationPending ? 'Verify email' : isRegister ? 'Create account' : 'Log in'}
+              onPress={verificationPending ? handleVerification : handleSubmit}
               loading={submitting}
             />
           </View>
 
-          <Pressable
-            onPress={() => {
-              setError(null);
-              setMode(isRegister ? 'login' : 'register');
-            }}
-            style={styles.toggle}
-            accessibilityRole="button"
-            accessibilityLabel={isRegister ? 'Switch to log in' : 'Switch to sign up'}
-          >
-            <Text style={styles.toggleText}>
-              {isRegister ? 'Already have an account? ' : "Don't have an account? "}
-              <Text style={styles.toggleLink}>{isRegister ? 'Log in' : 'Sign up'}</Text>
-            </Text>
-          </Pressable>
+          {verificationPending ? (
+            <View style={styles.verificationActions}>
+              <Pressable
+                onPress={async () => {
+                  try {
+                    await resendVerification();
+                    setError(null);
+                    Alert.alert('Code sent', 'A new verification code is on its way.');
+                  } catch (e: any) {
+                    setError(e?.message ?? 'Could not resend the code.');
+                  }
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Resend verification code"
+              >
+                <Text style={styles.toggleLink}>Resend code</Text>
+              </Pressable>
+              <Pressable
+                onPress={async () => {
+                  await cancelVerification();
+                  setVerificationCode('');
+                  setError(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Use another email address"
+              >
+                <Text style={styles.toggleText}>Use another email</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => {
+                setError(null);
+                setMode(isRegister ? 'login' : 'register');
+              }}
+              style={styles.toggle}
+              accessibilityRole="button"
+              accessibilityLabel={isRegister ? 'Switch to log in' : 'Switch to sign up'}
+            >
+              <Text style={styles.toggleText}>
+                {isRegister ? 'Already have an account? ' : "Don't have an account? "}
+                <Text style={styles.toggleLink}>{isRegister ? 'Log in' : 'Sign up'}</Text>
+              </Text>
+            </Pressable>
+          )}
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -158,6 +235,10 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     },
     toggle: {
       alignItems: 'center',
+    },
+    verificationActions: {
+      alignItems: 'center',
+      gap: space.md,
     },
     toggleText: {
       ...t.caption,

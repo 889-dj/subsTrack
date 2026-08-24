@@ -9,7 +9,12 @@ import { Screen } from '@/src/components/Screen';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { SkeletonList } from '@/src/components/SkeletonRow';
 import { SubscriptionIcon } from '@/src/components/SubscriptionIcon';
-import { useDeleteSubscription, useSubscription } from '@/src/hooks/useSubscriptions';
+import {
+  useDeleteSubscription,
+  usePauseSubscription,
+  useResumeSubscription,
+  useSubscription,
+} from '@/src/hooks/useSubscriptions';
 import { useTheme } from '@/src/hooks/useTheme';
 import { gutter, space, type Palette, type TextStyles } from '@/src/theme';
 import { longDate } from '@/src/utils/subscriptions';
@@ -22,6 +27,8 @@ export default function DetailScreen() {
   const router = useRouter();
   const { data: subscription, isLoading, isError } = useSubscription(id);
   const deleteMutation = useDeleteSubscription();
+  const pauseMutation = usePauseSubscription();
+  const resumeMutation = useResumeSubscription();
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
 
@@ -87,6 +94,7 @@ export default function DetailScreen() {
             <CategoryChip label={subscription.category ?? 'Other'} />
             {subscription.plan ? <CategoryChip label={subscription.plan} /> : null}
             {subscription.source ? <CategoryChip label={subscription.source} /> : null}
+            {subscription.status === 'paused' ? <CategoryChip label="Paused" /> : null}
           </View>
         </View>
 
@@ -117,6 +125,22 @@ export default function DetailScreen() {
 
         <View style={styles.actions}>
           <Button
+            label={subscription.status === 'paused' ? 'Resume tracking' : 'Pause tracking'}
+            variant="secondary"
+            onPress={() => {
+              const mutation = subscription.status === 'paused' ? resumeMutation : pauseMutation;
+              mutation.mutate(subscription.id, {
+                onError: () => {
+                  Alert.alert(
+                    'Could not update tracking',
+                    'Please check your connection and try again.',
+                  );
+                },
+              });
+            }}
+            loading={pauseMutation.isPending || resumeMutation.isPending}
+          />
+          <Button
             label="Remove from SubsTrack"
             variant="danger"
             onPress={handleDelete}
@@ -124,8 +148,8 @@ export default function DetailScreen() {
             style={styles.cancelButton}
           />
           <Text style={styles.honesty}>
-            To stop future charges, cancel directly with {subscription.name} or wherever you
-            subscribed.
+            Pausing only removes this item from totals and forecasts. To stop future charges,
+            cancel directly with {subscription.name} or wherever you subscribed.
           </Text>
         </View>
       </ScrollView>

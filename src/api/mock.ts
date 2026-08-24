@@ -43,6 +43,7 @@ let subscriptions: Subscription[] = [
     plan: 'Premium',
     createdAt: daysAgo(280),
     updatedAt: daysAgo(30),
+    status: 'active',
   },
   {
     id: '2',
@@ -56,6 +57,7 @@ let subscriptions: Subscription[] = [
     plan: 'Individual',
     createdAt: daysAgo(400),
     updatedAt: daysAgo(60),
+    status: 'active',
   },
   {
     id: '3',
@@ -69,6 +71,7 @@ let subscriptions: Subscription[] = [
     plan: 'Professional',
     createdAt: daysAgo(200),
     updatedAt: daysAgo(20),
+    status: 'active',
   },
   {
     id: '4',
@@ -82,6 +85,7 @@ let subscriptions: Subscription[] = [
     plan: 'Individual',
     createdAt: daysAgo(150),
     updatedAt: daysAgo(15),
+    status: 'active',
   },
   {
     id: '5',
@@ -95,6 +99,7 @@ let subscriptions: Subscription[] = [
     plan: 'Plus',
     createdAt: daysAgo(100),
     updatedAt: daysAgo(10),
+    status: 'active',
   },
   {
     id: '6',
@@ -108,6 +113,7 @@ let subscriptions: Subscription[] = [
     plan: 'All Apps',
     createdAt: daysAgo(500),
     updatedAt: daysAgo(45),
+    status: 'active',
   },
   {
     id: '7',
@@ -121,6 +127,7 @@ let subscriptions: Subscription[] = [
     plan: 'Plus',
     createdAt: daysAgo(320),
     updatedAt: daysAgo(90),
+    status: 'active',
   },
   {
     id: '8',
@@ -134,6 +141,7 @@ let subscriptions: Subscription[] = [
     plan: 'Plus',
     createdAt: daysAgo(60),
     updatedAt: daysAgo(5),
+    status: 'active',
   },
 ];
 let nextSubId = subscriptions.length + 1;
@@ -178,7 +186,7 @@ export function setupMockApi(): void {
     return [200, response];
   });
 
-  mock.onDelete('/auth/account').reply((config) => {
+  mock.onDelete('/account').reply((config) => {
     const userId = userIdFromToken(config.headers?.Authorization);
     if (!userId) return [401, { message: 'Not authenticated.' }];
     const exists = users.some((user) => user.id === userId);
@@ -190,7 +198,7 @@ export function setupMockApi(): void {
   mock.onGet('/subscriptions').reply((config) => {
     const userId = userIdFromToken(config.headers?.Authorization);
     if (!userId) return [401, { message: 'Not authenticated.' }];
-    return [200, subscriptions];
+    return [200, { items: subscriptions, nextCursor: null }];
   });
 
   mock.onPost('/subscriptions').reply((config) => {
@@ -200,11 +208,38 @@ export function setupMockApi(): void {
     const sub: Subscription = {
       ...input,
       id: String(nextSubId++),
+      status: 'active',
       createdAt: nowIso(),
       updatedAt: nowIso(),
     };
     subscriptions = [...subscriptions, sub];
     return [201, sub];
+  });
+
+  mock.onPost(/\/subscriptions\/[^/]+\/pause$/).reply((config) => {
+    const userId = userIdFromToken(config.headers?.Authorization);
+    if (!userId) return [401, { message: 'Not authenticated.' }];
+    const id = config.url!.split('/').at(-2);
+    const existing = subscriptions.find((subscription) => subscription.id === id);
+    if (!existing) return [404, { message: 'Subscription not found.' }];
+    const updated: Subscription = { ...existing, status: 'paused', updatedAt: nowIso() };
+    subscriptions = subscriptions.map((subscription) =>
+      subscription.id === id ? updated : subscription,
+    );
+    return [200, updated];
+  });
+
+  mock.onPost(/\/subscriptions\/[^/]+\/resume$/).reply((config) => {
+    const userId = userIdFromToken(config.headers?.Authorization);
+    if (!userId) return [401, { message: 'Not authenticated.' }];
+    const id = config.url!.split('/').at(-2);
+    const existing = subscriptions.find((subscription) => subscription.id === id);
+    if (!existing) return [404, { message: 'Subscription not found.' }];
+    const updated: Subscription = { ...existing, status: 'active', updatedAt: nowIso() };
+    subscriptions = subscriptions.map((subscription) =>
+      subscription.id === id ? updated : subscription,
+    );
+    return [200, updated];
   });
 
   mock.onGet(/\/subscriptions\/.+/).reply((config) => {

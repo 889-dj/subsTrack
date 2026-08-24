@@ -7,7 +7,6 @@
     "icon": "./assets/icon.png",
     "scheme": "subtrack",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.devjain.subsTrack",
@@ -32,7 +31,7 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-document-picker",
+      "@clerk/expo",
       "@react-native-community/datetimepicker"
     ],
     "extra": {

@@ -33,11 +33,15 @@ export default function AccountScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const subs = useMemo(() => subscriptions ?? [], [subscriptions]);
+  const activeCount = useMemo(
+    () => subs.filter((subscription) => subscription.status === 'active').length,
+    [subs],
+  );
   const currencyScope = useMemo(() => scopeSubscriptionsByCurrency(subs), [subs]);
   const stats = useMemo(() => {
     const monthly = monthlyTotal(currencyScope.included);
-    return { total: subs.length, monthly, yearly: monthly * 12 };
-  }, [subs.length, currencyScope.included]);
+    return { total: activeCount, monthly, yearly: monthly * 12 };
+  }, [activeCount, currencyScope.included]);
 
   const currency = currencyScope.currency;
   const email = user?.email?.trim();

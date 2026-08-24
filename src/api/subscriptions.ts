@@ -1,9 +1,9 @@
 import { http } from '@/src/api/http';
-import type { Subscription, SubscriptionInput } from '@/src/types';
+import type { Subscription, SubscriptionInput, SubscriptionListResponse } from '@/src/types';
 
 export async function fetchSubscriptions(): Promise<Subscription[]> {
-  const { data } = await http.get<Subscription[]>('/subscriptions');
-  return data;
+  const { data } = await http.get<SubscriptionListResponse>('/subscriptions');
+  return data.items;
 }
 
 export async function fetchSubscription(id: string): Promise<Subscription> {
@@ -26,4 +26,14 @@ export async function updateSubscription(
 
 export async function deleteSubscription(id: string): Promise<void> {
   await http.delete(`/subscriptions/${id}`);
+}
+
+export async function pauseSubscription(id: string): Promise<Subscription> {
+  const { data } = await http.post<Subscription>(`/subscriptions/${id}/pause`);
+  return data;
+}
+
+export async function resumeSubscription(id: string): Promise<Subscription> {
+  const { data } = await http.post<Subscription>(`/subscriptions/${id}/resume`, {});
+  return data;
 }

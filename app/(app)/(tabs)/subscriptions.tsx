@@ -31,6 +31,10 @@ export default function SubscriptionsScreen() {
   const [category, setCategory] = useState('All');
 
   const subs = useMemo(() => data ?? [], [data]);
+  const activeCount = useMemo(
+    () => subs.filter((subscription) => subscription.status === 'active').length,
+    [subs],
+  );
   const currencyScope = useMemo(() => scopeSubscriptionsByCurrency(subs), [subs]);
   const monthly = useMemo(() => monthlyTotal(currencyScope.included), [currencyScope.included]);
   const currency = currencyScope.currency;
@@ -67,7 +71,7 @@ export default function SubscriptionsScreen() {
           <Text style={t.heading}>Subscriptions</Text>
         </View>
         <View style={styles.statsRow}>
-          <Text style={styles.statText}>{subs.length} active</Text>
+          <Text style={styles.statText}>{activeCount} active</Text>
           <Text style={styles.statDot}>·</Text>
           <Text style={styles.statText}>
             {formatCompactMoney(monthly, currency)}/month

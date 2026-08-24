@@ -12,6 +12,7 @@ function renewalTime(sub: Subscription): number {
 export function spendByCategory(subs: Subscription[]): { category: string; amount: number }[] {
   const totals = new Map<string, number>();
   for (const sub of subs) {
+    if (sub.status !== 'active') continue;
     const key = sub.category ?? 'Other';
     totals.set(key, (totals.get(key) ?? 0) + monthlyCost(sub) * 12);
   }
@@ -45,6 +46,7 @@ export function scheduledRenewalTotalForMonth(
   const targetMonth = month.getFullYear() * 12 + month.getMonth();
 
   return subs.reduce((total, sub) => {
+    if (sub.status !== 'active') return total;
     const renewal = new Date(sub.nextRenewalDate);
     if (Number.isNaN(renewal.getTime())) return total;
 
@@ -92,6 +94,7 @@ export function renewalForecast(
   });
 
   for (const sub of subs) {
+    if (sub.status !== 'active') continue;
     let renewal = new Date(sub.nextRenewalDate);
     if (Number.isNaN(renewal.getTime())) continue;
 
@@ -129,6 +132,7 @@ export function renewalForecast(
 export function groupByRenewalDate(subs: Subscription[]): RenewalGroup[] {
   const groups = new Map<string, Subscription[]>();
   for (const sub of subs) {
+    if (sub.status !== 'active') continue;
     const d = new Date(sub.nextRenewalDate);
     const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
     const list = groups.get(key) ?? [];
@@ -154,7 +158,7 @@ export function upcoming(subs: Subscription[], days = 30): Subscription[] {
   const now = Date.now();
   const cutoff = now + days * DAY;
   return [...subs]
-    .filter((s) => renewalTime(s) <= cutoff)
+    .filter((s) => s.status === 'active' && renewalTime(s) >= now && renewalTime(s) <= cutoff)
     .sort((a, b) => renewalTime(a) - renewalTime(b));
 }
 

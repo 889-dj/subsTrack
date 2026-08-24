@@ -5,7 +5,10 @@ export function monthlyCost(sub: Pick<Subscription, 'cost' | 'billingCycle'>): n
 }
 
 export function monthlyTotal(subs: Subscription[]): number {
-  return subs.reduce((sum, sub) => sum + monthlyCost(sub), 0);
+  return subs.reduce(
+    (sum, sub) => (sub.status === 'active' ? sum + monthlyCost(sub) : sum),
+    0,
+  );
 }
 
 /**
@@ -14,7 +17,9 @@ export function monthlyTotal(subs: Subscription[]): number {
  * cards and charts to the most common currency and disclose what was omitted.
  */
 export function scopeSubscriptionsByCurrency(subs: Subscription[]) {
-  if (subs.length === 0) {
+  const active = subs.filter((sub) => sub.status === 'active');
+
+  if (active.length === 0) {
     return {
       currency: 'INR',
       included: [] as Subscription[],
@@ -24,11 +29,11 @@ export function scopeSubscriptionsByCurrency(subs: Subscription[]) {
   }
 
   const counts = new Map<string, number>();
-  for (const sub of subs) counts.set(sub.currency, (counts.get(sub.currency) ?? 0) + 1);
+  for (const sub of active) counts.set(sub.currency, (counts.get(sub.currency) ?? 0) + 1);
 
   const currency = [...counts.entries()].sort((left, right) => right[1] - left[1])[0][0];
-  const included = subs.filter((sub) => sub.currency === currency);
-  const excluded = subs.filter((sub) => sub.currency !== currency);
+  const included = active.filter((sub) => sub.currency === currency);
+  const excluded = active.filter((sub) => sub.currency !== currency);
 
   return {
     currency,

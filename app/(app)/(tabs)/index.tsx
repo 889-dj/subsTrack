@@ -48,6 +48,10 @@ export default function OverviewScreen() {
   const [forecastRange, setForecastRange] = useState<ForecastRange>(6);
 
   const subs = useMemo(() => data ?? [], [data]);
+  const activeSubs = useMemo(
+    () => subs.filter((subscription) => subscription.status === 'active'),
+    [subs],
+  );
   const currencyScope = useMemo(() => scopeSubscriptionsByCurrency(subs), [subs]);
   const monthly = useMemo(() => monthlyTotal(currencyScope.included), [currencyScope.included]);
   const yearly = monthly * 12;
@@ -68,7 +72,7 @@ export default function OverviewScreen() {
   const renewalGroups = useMemo(() => groupByRenewalDate(subs), [subs]);
   const upcomingGroups = useMemo(() => renewalGroups.slice(0, 5), [renewalGroups]);
 
-  const isEmpty = !isLoading && subs.length === 0;
+  const isEmpty = !isLoading && activeSubs.length === 0;
 
   return (
     <Animated.ScrollView
@@ -110,7 +114,7 @@ export default function OverviewScreen() {
             monthly={monthly}
             yearly={yearly}
             currency={currency}
-            activeCount={subs.length}
+            activeCount={activeSubs.length}
             deltaPercent={monthChange}
             scopeNote={
               currencyScope.excludedCount > 0
@@ -160,7 +164,7 @@ export default function OverviewScreen() {
           )}
 
           <SectionHeader label="Renewal forecast" />
-          {subs.length > 0 ? (
+          {activeSubs.length > 0 ? (
             <SpendingTrendChart
               subscriptions={currencyScope.included}
               currency={currency}

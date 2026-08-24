@@ -1,4 +1,5 @@
 export type BillingCycle = 'monthly' | 'yearly';
+export type SubscriptionStatus = 'active' | 'paused';
 
 export const CATEGORIES = [
   'Entertainment',
@@ -62,11 +63,17 @@ export interface Subscription {
   note?: string;
   /** Plan/tier label shown on the detail screen, e.g. "Premium", "Pro". Optional, synthetic. */
   plan?: string;
+  status: SubscriptionStatus;
   createdAt: string;
   updatedAt: string;
 }
 
-export type SubscriptionInput = Omit<Subscription, 'id' | 'createdAt' | 'updatedAt'>;
+export type SubscriptionInput = Omit<Subscription, 'id' | 'status' | 'createdAt' | 'updatedAt'>;
+
+export interface SubscriptionListResponse {
+  items: Subscription[];
+  nextCursor: string | null;
+}
 
 export interface User {
   id: string;
