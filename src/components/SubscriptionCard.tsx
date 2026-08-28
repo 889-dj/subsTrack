@@ -33,7 +33,7 @@ export function SubscriptionCard({ subscription, onPress, variant = 'row' }: Sub
       accessibilityRole="button"
       accessibilityLabel={`${subscription.name}, ${subscription.cost} ${subscription.currency}, renews ${shortDate(subscription.nextRenewalDate)}`}
     >
-      <SubscriptionIcon name={subscription.name} size={44} />
+      <SubscriptionIcon name={subscription.name} logoUrl={subscription.logoUrl} size={44} />
       <View style={styles.copy}>
         <Text style={styles.name} numberOfLines={1}>
           {subscription.name}

@@ -71,7 +71,7 @@ export function MultiRenewalSheet({ visible, onClose, date, subs }: MultiRenewal
             accessibilityRole="button"
             accessibilityLabel={`Open ${sub.name}, ${sub.cost} ${sub.currency}`}
           >
-            <SubscriptionIcon name={sub.name} size={40} />
+            <SubscriptionIcon name={sub.name} logoUrl={sub.logoUrl} size={40} />
             <View style={styles.copy}>
               <Text style={t.body} numberOfLines={1}>
                 {sub.name}

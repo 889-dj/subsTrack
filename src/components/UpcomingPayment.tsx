@@ -43,7 +43,7 @@ export function UpcomingPayment({ subs, onPress }: UpcomingPaymentProps) {
         <View style={styles.stack}>
           {subs.slice(0, 2).map((s, i) => (
             <View key={s.id} style={[styles.stackItem, { left: i * 18, zIndex: 2 - i }]}>
-              <SubscriptionIcon name={s.name} size={38} />
+              <SubscriptionIcon name={s.name} logoUrl={s.logoUrl} size={38} />
             </View>
           ))}
           {subs.length > 2 ? (
@@ -53,7 +53,7 @@ export function UpcomingPayment({ subs, onPress }: UpcomingPaymentProps) {
           ) : null}
         </View>
       ) : (
-        <SubscriptionIcon name={primary.name} size={44} />
+        <SubscriptionIcon name={primary.name} logoUrl={primary.logoUrl} size={44} />
       )}
 
       <Text style={styles.name} numberOfLines={1}>

@@ -57,6 +57,8 @@ export interface Subscription {
   currency: string;
   billingCycle: BillingCycle;
   nextRenewalDate: string; // ISO date string
+  /** Best-effort merchant logo image URL, derived server-side from `name`. */
+  logoUrl?: string;
   category?: string;
   /** The app or method the subscription is billed through, e.g. "Google Pay". */
   source?: string;

@@ -86,7 +86,7 @@ export default function DetailScreen() {
         />
 
         <View style={styles.hero}>
-          <SubscriptionIcon name={subscription.name} size={64} />
+          <SubscriptionIcon name={subscription.name} logoUrl={subscription.logoUrl} size={64} />
           <Text style={styles.name} numberOfLines={2}>
             {subscription.name}
           </Text>

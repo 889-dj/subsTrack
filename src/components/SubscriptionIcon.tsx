@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { hashTile } from '@/src/components/Logo';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font, type Palette } from '@/src/theme';
@@ -21,20 +21,24 @@ function hashLight(name: string): { bg: string; fg: string } {
 
 interface SubscriptionIconProps {
   name: string;
+  logoUrl?: string;
   size?: number;
 }
 
 /**
  * The 44x44 rounded-square merchant tile used across Overview, Subscriptions,
- * Calendar and Insights — a colour-hashed initial standing in for a real
- * logo asset. Distinct from `Logo`, which is reserved for the user's own
- * avatar.
+ * Calendar and Insights. Renders the server-derived `logoUrl` when present,
+ * falling back to a colour-hashed initial — on a missing URL, a load error
+ * (unknown domain, offline), or while mock mode has no logo at all.
+ * Distinct from `Logo`, which is reserved for the user's own avatar.
  */
-export function SubscriptionIcon({ name, size = 44 }: SubscriptionIconProps) {
+export function SubscriptionIcon({ name, logoUrl, size = 44 }: SubscriptionIconProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [imageFailed, setImageFailed] = useState(false);
   const initial = (name.trim()[0] ?? '?').toUpperCase();
   const tile = useMemo(() => (colors.isDark ? hashTile(name) : hashLight(name)), [colors, name]);
+  const showImage = Boolean(logoUrl) && !imageFailed;
 
   return (
     <View
@@ -44,13 +48,22 @@ export function SubscriptionIcon({ name, size = 44 }: SubscriptionIconProps) {
           width: size,
           height: size,
           borderRadius: Math.round(size * 0.32),
-          backgroundColor: tile.bg,
+          backgroundColor: showImage ? colors.surface : tile.bg,
         },
       ]}
     >
-      <Text style={[styles.initial, { fontSize: Math.round(size * 0.4), color: tile.fg }]}>
-        {initial}
-      </Text>
+      {showImage ? (
+        <Image
+          source={{ uri: logoUrl }}
+          onError={() => setImageFailed(true)}
+          style={{ width: size, height: size, borderRadius: Math.round(size * 0.32) }}
+          resizeMode="contain"
+        />
+      ) : (
+        <Text style={[styles.initial, { fontSize: Math.round(size * 0.4), color: tile.fg }]}>
+          {initial}
+        </Text>
+      )}
     </View>
   );
 }
