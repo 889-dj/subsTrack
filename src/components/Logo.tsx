@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font } from '@/src/theme';
 
@@ -29,19 +29,41 @@ export function hashTile(name: string): { bg: string; fg: string } {
  * A monogram stands in for the merchant logo — square with a small radius so
  * it reads as part of the list rather than a floating app icon.
  */
-export function Logo({ name, size = 28 }: { name: string; size?: number }) {
+export function Logo({
+  name,
+  size = 28,
+  imageUri,
+}: {
+  name: string;
+  size?: number;
+  /** Uploaded profile photo, if any — falls back to the initial tile on a missing URL or load error. */
+  imageUri?: string;
+}) {
   const { colors } = useTheme();
+  const [imageFailed, setImageFailed] = useState(false);
+  useEffect(() => setImageFailed(false), [imageUri]);
   const initial = (name.trim()[0] ?? '?').toUpperCase();
   const tile = useMemo(
     () => (colors.isDark ? hashTile(name) : { bg: colors.indigoBg, fg: colors.indigo }),
     [colors, name]
   );
+  const radius = Math.round(size / 4.5);
+
+  if (imageUri && !imageFailed) {
+    return (
+      <Image
+        source={{ uri: imageUri }}
+        onError={() => setImageFailed(true)}
+        style={{ width: size, height: size, borderRadius: radius }}
+      />
+    );
+  }
 
   return (
     <View
       style={[
         styles.box,
-        { width: size, height: size, borderRadius: Math.round(size / 4.5), backgroundColor: tile.bg },
+        { width: size, height: size, borderRadius: radius, backgroundColor: tile.bg },
       ]}
     >
       <Text style={[styles.initial, { fontSize: Math.round(size * 0.45), color: tile.fg }]}>

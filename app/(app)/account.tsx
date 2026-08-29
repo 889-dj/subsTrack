@@ -1,15 +1,29 @@
-import React, { useMemo, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { AmountText } from '@/src/components/AmountText';
 import { Icon, type IconName } from '@/src/components/Icon';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { pickPrimaryCurrency, useOverview } from '@/src/hooks/useAnalytics';
 import { useAuth } from '@/src/hooks/useAuth';
+import { useDeleteAvatar, useMe, useUploadAvatar } from '@/src/hooks/useMe';
 import { usePurchases } from '@/src/hooks/usePurchases';
 import { useTheme, type ThemeModePreference } from '@/src/hooks/useTheme';
 import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
+
+const ALLOWED_AVATAR_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 const APPEARANCE_OPTIONS: {
   value: ThemeModePreference;
@@ -27,9 +41,17 @@ export default function AccountScreen() {
   const { user, logout, deleteAccount } = useAuth();
   const { isPro, managementUrl } = usePurchases();
   const { data: overview } = useOverview();
+  const { data: me } = useMe();
+  const uploadAvatarMutation = useUploadAvatar();
+  const deleteAvatarMutation = useDeleteAvatar();
   const { colors, text: t, mode, setMode } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+
+  const avatarUrl = me?.avatarUrl ?? undefined;
+  const isUpdatingAvatar = uploadAvatarMutation.isPending || deleteAvatarMutation.isPending;
+  useEffect(() => setAvatarLoadFailed(false), [avatarUrl]);
 
   const { primary, excludedCount, excludedCurrencies } = useMemo(
     () => pickPrimaryCurrency(overview?.currencies ?? []),
@@ -44,6 +66,61 @@ export default function AccountScreen() {
   const currency = primary?.currency ?? 'INR';
   const email = user?.email?.trim();
   const initial = email?.[0]?.toUpperCase();
+
+  async function pickAndUploadPhoto() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        'Photo access needed',
+        'Allow photo library access in Settings to set a profile picture.',
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+
+    const asset = result.assets[0];
+    const mimeType = asset.mimeType;
+    if (!mimeType || !ALLOWED_AVATAR_MIME_TYPES.has(mimeType)) {
+      Alert.alert("Can't use this photo", 'Choose a JPEG, PNG, or WEBP image.');
+      return;
+    }
+
+    try {
+      await uploadAvatarMutation.mutateAsync({
+        uri: asset.uri,
+        mimeType: mimeType as 'image/jpeg' | 'image/png' | 'image/webp',
+      });
+    } catch {
+      Alert.alert("Couldn't update photo", 'Please check your connection and try again.');
+    }
+  }
+
+  function handleChangePhoto() {
+    const options: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [
+      { text: 'Choose Photo', onPress: pickAndUploadPhoto },
+    ];
+    if (avatarUrl) {
+      options.push({
+        text: 'Remove Photo',
+        style: 'destructive',
+        onPress: () => {
+          deleteAvatarMutation.mutate(undefined, {
+            onError: () =>
+              Alert.alert("Couldn't remove photo", 'Please check your connection and try again.'),
+          });
+        },
+      });
+    }
+    options.push({ text: 'Cancel', style: 'cancel' });
+    Alert.alert('Profile photo', undefined, options);
+  }
 
   function handleLogout() {
     Alert.alert('Log out?', "You'll need to sign in again to see your subscriptions.", [
@@ -106,13 +183,28 @@ export default function AccountScreen() {
         style={({ pressed }) => [styles.pass, pressed && styles.pressed]}
       >
         <View style={styles.identityRow}>
-          <View style={styles.avatar}>
-            {initial ? (
+          <Pressable
+            onPress={handleChangePhoto}
+            disabled={isUpdatingAvatar}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Change profile photo"
+            style={styles.avatar}
+          >
+            {isUpdatingAvatar ? (
+              <ActivityIndicator size="small" color={colors.heroInk} />
+            ) : avatarUrl && !avatarLoadFailed ? (
+              <Image
+                source={{ uri: avatarUrl }}
+                style={styles.avatarImage}
+                onError={() => setAvatarLoadFailed(true)}
+              />
+            ) : initial ? (
               <Text style={styles.avatarInitial}>{initial}</Text>
             ) : (
               <Icon name="user" size={23} color={colors.heroInk} strokeWidth={1.7} />
             )}
-          </View>
+          </Pressable>
 
           <View style={styles.identityCopy}>
             <Text style={styles.identityTitle} numberOfLines={1}>
@@ -306,6 +398,11 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       fontFamily: font.monoMed,
       fontSize: 19,
       color: colors.heroInk,
+    },
+    avatarImage: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
     },
     identityCopy: {
       flex: 1,

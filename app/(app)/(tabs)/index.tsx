@@ -17,6 +17,7 @@ import {
 import { TAB_BAR_CLEARANCE } from '@/src/components/BottomNav';
 import { UpcomingPayment } from '@/src/components/UpcomingPayment';
 import { useAuth } from '@/src/hooks/useAuth';
+import { useMe } from '@/src/hooks/useMe';
 import { pickPrimaryCurrency, useOverview, useSpendTrend } from '@/src/hooks/useAnalytics';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -36,6 +37,7 @@ export default function OverviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { data: me } = useMe();
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const { data, isLoading, isError, refetch, isRefetching } = useSubscriptions();
@@ -114,7 +116,7 @@ export default function OverviewScreen() {
           accessibilityLabel="Open settings and Pro plans"
           style={({ pressed }) => [styles.accountButton, pressed && styles.accountButtonPressed]}
         >
-          <Logo name={user?.email || '?'} size={30} />
+          <Logo name={user?.email || '?'} size={30} imageUri={me?.avatarUrl ?? undefined} />
           <Text style={styles.accountLabel}>Account</Text>
           <Icon name="chevron-forward" size={14} color={colors.faint} />
         </Pressable>

@@ -9,6 +9,7 @@ const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK_API !== 'false';
 
 interface StoredUser extends User {
   password: string;
+  avatarUrl?: string | null;
 }
 
 let users: StoredUser[] = [];
@@ -193,6 +194,42 @@ export function setupMockApi(): void {
     if (!exists) return [404, { message: 'Account not found.' }];
     users = users.filter((user) => user.id !== userId);
     return [204];
+  });
+
+  mock.onGet('/me').reply((config) => {
+    const userId = userIdFromToken(config.headers?.Authorization);
+    const user = users.find((u) => u.id === userId);
+    if (!userId || !user) return [401, { message: 'Not authenticated.' }];
+    return [
+      200,
+      {
+        id: user.id,
+        email: user.email,
+        avatarUrl: user.avatarUrl ?? null,
+        isPro: false,
+        proUntil: null,
+        createdAt: nowIso(),
+      },
+    ];
+  });
+
+  // No real storage in mock mode — echoes back a stable placeholder so the UI
+  // has something to render without needing network access to a real host.
+  mock.onPost('/me/avatar').reply((config) => {
+    const userId = userIdFromToken(config.headers?.Authorization);
+    const user = users.find((u) => u.id === userId);
+    if (!userId || !user) return [401, { message: 'Not authenticated.' }];
+    const avatarUrl = `https://api.dicebear.com/9.x/initials/png?seed=${encodeURIComponent(user.email)}`;
+    user.avatarUrl = avatarUrl;
+    return [200, { avatarUrl }];
+  });
+
+  mock.onDelete('/me/avatar').reply((config) => {
+    const userId = userIdFromToken(config.headers?.Authorization);
+    const user = users.find((u) => u.id === userId);
+    if (!userId || !user) return [401, { message: 'Not authenticated.' }];
+    user.avatarUrl = null;
+    return [200, { avatarUrl: null }];
   });
 
   // The real backend calls an external model; mock mode has no such thing to
