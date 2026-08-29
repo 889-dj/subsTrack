@@ -12,18 +12,16 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
 import { AmountText } from '@/src/components/AmountText';
 import { Icon, type IconName } from '@/src/components/Icon';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
-import { pickPrimaryCurrency, useOverview } from '@/src/hooks/useAnalytics';
+import { useOverview, useSpendHeadline } from '@/src/hooks/useAnalytics';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useDeleteAvatar, useMe, useUploadAvatar } from '@/src/hooks/useMe';
 import { usePurchases } from '@/src/hooks/usePurchases';
 import { useTheme, type ThemeModePreference } from '@/src/hooks/useTheme';
+import { pickImage } from '@/src/lib/imagePicker';
 import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
-
-const ALLOWED_AVATAR_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 const APPEARANCE_OPTIONS: {
   value: ThemeModePreference;
@@ -53,50 +51,36 @@ export default function AccountScreen() {
   const isUpdatingAvatar = uploadAvatarMutation.isPending || deleteAvatarMutation.isPending;
   useEffect(() => setAvatarLoadFailed(false), [avatarUrl]);
 
-  const { primary, excludedCount, excludedCurrencies } = useMemo(
-    () => pickPrimaryCurrency(overview?.currencies ?? []),
-    [overview],
-  );
-  const stats = {
-    total: primary?.activeCount ?? 0,
-    monthly: primary ? Number(primary.monthlyCommitment) : 0,
-    yearly: primary ? Number(primary.annualRunRate) : 0,
-  };
-
-  const currency = primary?.currency ?? 'INR';
+  const { currency, monthly, yearly, totalActiveCount, note: otherCurrenciesNote } =
+    useSpendHeadline(overview);
+  const stats = { total: totalActiveCount, monthly, yearly };
   const email = user?.email?.trim();
   const initial = email?.[0]?.toUpperCase();
 
   async function pickAndUploadPhoto() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert(
-        'Photo access needed',
-        'Allow photo library access in Settings to set a profile picture.',
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (result.canceled) return;
-
-    const asset = result.assets[0];
-    const mimeType = asset.mimeType;
-    if (!mimeType || !ALLOWED_AVATAR_MIME_TYPES.has(mimeType)) {
-      Alert.alert("Can't use this photo", 'Choose a JPEG, PNG, or WEBP image.');
-      return;
+    const outcome = await pickImage();
+    switch (outcome.status) {
+      case 'unavailable':
+        Alert.alert(
+          'Update needed',
+          'Photo uploads need a newer build of the app. This will work once you update.',
+        );
+        return;
+      case 'permission-denied':
+        Alert.alert(
+          'Photo access needed',
+          'Allow photo library access in Settings to set a profile picture.',
+        );
+        return;
+      case 'unsupported-type':
+        Alert.alert("Can't use this photo", 'Choose a JPEG, PNG, or WEBP image.');
+        return;
+      case 'cancelled':
+        return;
     }
 
     try {
-      await uploadAvatarMutation.mutateAsync({
-        uri: asset.uri,
-        mimeType: mimeType as 'image/jpeg' | 'image/png' | 'image/webp',
-      });
+      await uploadAvatarMutation.mutateAsync(outcome.image);
     } catch {
       Alert.alert("Couldn't update photo", 'Please check your connection and try again.');
     }
@@ -246,11 +230,8 @@ export default function AccountScreen() {
           </View>
         </View>
 
-        {excludedCount > 0 ? (
-          <Text style={styles.passScope}>
-            {currency} totals · {excludedCount} in{' '}
-            {excludedCurrencies.join(', ')} shown separately
-          </Text>
+        {otherCurrenciesNote ? (
+          <Text style={styles.passScope}>{currency} totals · {otherCurrenciesNote}</Text>
         ) : null}
 
         <View style={styles.planAction}>

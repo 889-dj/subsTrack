@@ -9,7 +9,7 @@ import { FilterChips } from '@/src/components/FilterChips';
 import { SearchBar } from '@/src/components/SearchBar';
 import { SkeletonList } from '@/src/components/SkeletonRow';
 import { SubscriptionCard } from '@/src/components/SubscriptionCard';
-import { pickPrimaryCurrency, useOverview } from '@/src/hooks/useAnalytics';
+import { useOverview, useSpendHeadline } from '@/src/hooks/useAnalytics';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -22,8 +22,12 @@ export default function SubscriptionsScreen() {
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const { data, isLoading, refetch, isRefetching } = useSubscriptions();
-  const { data: overview } = useOverview();
+  const { data: overview, refetch: refetchOverview } = useOverview();
   const { onScroll } = useTabBarScroll();
+
+  async function handleRefresh() {
+    await Promise.all([refetch(), refetchOverview()]);
+  }
 
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
@@ -33,12 +37,7 @@ export default function SubscriptionsScreen() {
     () => subs.filter((subscription) => subscription.status === 'active').length,
     [subs],
   );
-  const { primary, excludedCount, excludedCurrencies } = useMemo(
-    () => pickPrimaryCurrency(overview?.currencies ?? []),
-    [overview],
-  );
-  const monthly = primary ? Number(primary.monthlyCommitment) : 0;
-  const currency = primary?.currency ?? 'INR';
+  const { currency, monthly, note: otherCurrenciesNote } = useSpendHeadline(overview);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -64,7 +63,7 @@ export default function SubscriptionsScreen() {
         onScroll={onScroll}
         scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.indigo} />
+          <RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor={colors.indigo} />
         }
       >
         <View style={styles.header}>
@@ -78,12 +77,8 @@ export default function SubscriptionsScreen() {
             {formatCompactMoney(monthly, currency)}/month
           </Text>
         </View>
-        {excludedCount > 0 ? (
-          <Text style={styles.scopeHint}>
-            Total shows {currency}; {excludedCount} subscription
-            {excludedCount === 1 ? '' : 's'} in{' '}
-            {excludedCurrencies.join(', ')} remain separate.
-          </Text>
+        {otherCurrenciesNote ? (
+          <Text style={styles.scopeHint}>Total shows {currency}; {otherCurrenciesNote}.</Text>
         ) : null}
 
         <View style={styles.searchRow}>

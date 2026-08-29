@@ -10,7 +10,7 @@ import { InsightCard } from '@/src/components/InsightCard';
 import { Money } from '@/src/components/Money';
 import { SectionHeader } from '@/src/components/SectionHeader';
 import { SkeletonList } from '@/src/components/SkeletonRow';
-import { pickPrimaryCurrency, useOverview } from '@/src/hooks/useAnalytics';
+import { useOverview, useSpendHeadline } from '@/src/hooks/useAnalytics';
 import { useInsights, useRefreshInsights } from '@/src/hooks/useInsights';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
@@ -38,13 +38,7 @@ export default function InsightsScreen() {
     [subs],
   );
 
-  const { primary, excludedCount, excludedCurrencies } = useMemo(
-    () => pickPrimaryCurrency(overview?.currencies ?? []),
-    [overview],
-  );
-  const currency = primary?.currency ?? 'INR';
-  const monthly = primary ? Number(primary.monthlyCommitment) : 0;
-  const yearly = primary ? Number(primary.annualRunRate) : 0;
+  const { primary, currency, monthly, yearly, note: otherCurrenciesNote } = useSpendHeadline(overview);
   const byCategory = useMemo(
     () =>
       (primary?.byCategory ?? []).map((c) => ({
@@ -156,12 +150,8 @@ export default function InsightsScreen() {
               {formatCompactMoney(monthly, currency)} each month across {scopedSubs.length}{' '}
               {currency} subscription{scopedSubs.length === 1 ? '' : 's'}.
             </Text>
-            {excludedCount > 0 ? (
-              <Text style={styles.heroScope}>
-                {excludedCount} subscription
-                {excludedCount === 1 ? '' : 's'} in{' '}
-                {excludedCurrencies.join(', ')} excluded from this total.
-              </Text>
+            {otherCurrenciesNote ? (
+              <Text style={styles.heroScope}>{otherCurrenciesNote}.</Text>
             ) : null}
           </View>
 

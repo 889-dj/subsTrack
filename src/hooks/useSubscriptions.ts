@@ -5,6 +5,18 @@ import type { Subscription, SubscriptionInput } from '@/src/types';
 const subscriptionsKey = ['subscriptions'] as const;
 const subscriptionKey = (id: string) => ['subscriptions', id] as const;
 
+/**
+ * Every mutation below changes numbers the backend computes separately —
+ * /v1/analytics/overview, /v1/analytics/spend-trend, /v1/insights all read
+ * the subscriptions table themselves, so they go stale right alongside the
+ * subscriptions list and need invalidating together, not just the list.
+ */
+function invalidateSpendQueries(queryClient: ReturnType<typeof useQueryClient>): void {
+  queryClient.invalidateQueries({ queryKey: subscriptionsKey });
+  queryClient.invalidateQueries({ queryKey: ['analytics'] });
+  queryClient.invalidateQueries({ queryKey: ['insights'] });
+}
+
 export function useSubscriptions() {
   return useQuery({
     queryKey: subscriptionsKey,
@@ -33,7 +45,7 @@ export function useAddSubscription() {
   return useMutation({
     mutationFn: (input: SubscriptionInput) => api.createSubscription(input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: subscriptionsKey });
+      invalidateSpendQueries(queryClient);
     },
   });
 }
@@ -44,7 +56,7 @@ export function useUpdateSubscription() {
     mutationFn: ({ id, input }: { id: string; input: Partial<SubscriptionInput> }) =>
       api.updateSubscription(id, input),
     onSuccess: (updated: Subscription) => {
-      queryClient.invalidateQueries({ queryKey: subscriptionsKey });
+      invalidateSpendQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: subscriptionKey(updated.id) });
     },
   });
@@ -55,7 +67,7 @@ export function useDeleteSubscription() {
   return useMutation({
     mutationFn: (id: string) => api.deleteSubscription(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: subscriptionsKey });
+      invalidateSpendQueries(queryClient);
     },
   });
 }
@@ -66,7 +78,7 @@ function useStatusMutation(action: 'pause' | 'resume') {
     mutationFn: (id: string) =>
       action === 'pause' ? api.pauseSubscription(id) : api.resumeSubscription(id),
     onSuccess: (updated: Subscription) => {
-      queryClient.invalidateQueries({ queryKey: subscriptionsKey });
+      invalidateSpendQueries(queryClient);
       queryClient.setQueryData(subscriptionKey(updated.id), updated);
     },
   });

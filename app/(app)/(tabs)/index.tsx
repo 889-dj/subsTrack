@@ -18,7 +18,7 @@ import { TAB_BAR_CLEARANCE } from '@/src/components/BottomNav';
 import { UpcomingPayment } from '@/src/components/UpcomingPayment';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useMe } from '@/src/hooks/useMe';
-import { pickPrimaryCurrency, useOverview, useSpendTrend } from '@/src/hooks/useAnalytics';
+import { useOverview, useSpendHeadline, useSpendTrend } from '@/src/hooks/useAnalytics';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
@@ -62,13 +62,10 @@ export default function OverviewScreen() {
     [subs],
   );
 
-  const { primary, excludedCount, excludedCurrencies } = useMemo(
-    () => pickPrimaryCurrency(overview?.currencies ?? []),
-    [overview],
-  );
-  const currency = primary?.currency ?? 'INR';
-  const monthly = primary ? Number(primary.monthlyCommitment) : 0;
-  const yearly = primary ? Number(primary.annualRunRate) : 0;
+  const { primary, currency, monthly, yearly, note: scopeNote } = useSpendHeadline(overview);
+  // Month-over-month change stays scoped to the dominant currency only —
+  // comparing it against a converted figure would need historical FX rates,
+  // not just today's, so it's left unconverted rather than guessed.
   const monthChange = primary?.changePercent != null ? Number(primary.changePercent) : null;
 
   const { data: trend } = useSpendTrend(forecastRange, primary?.currency);
@@ -130,13 +127,9 @@ export default function OverviewScreen() {
             monthly={monthly}
             yearly={yearly}
             currency={currency}
-            activeCount={primary?.activeCount ?? 0}
+            activeCount={activeSubs.length}
             deltaPercent={monthChange}
-            scopeNote={
-              excludedCount > 0
-                ? `${currency} totals only · ${excludedCount} subscription${excludedCount === 1 ? '' : 's'} in ${excludedCurrencies.join(', ')} shown separately`
-                : undefined
-            }
+            scopeNote={scopeNote}
           />
 
           {isError ? <Text style={styles.error}>Couldn't refresh — showing the last data.</Text> : null}

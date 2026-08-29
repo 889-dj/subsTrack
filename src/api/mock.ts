@@ -334,7 +334,20 @@ export function setupMockApi(): void {
             .sort((a, b) => Number(b.monthlyCommitment) - Number(a.monthlyCommitment)),
         };
       });
-    return [200, { asOf: nowIso(), currencies }];
+    // No live FX in mock mode: only fill `combined` when it's exact (a
+    // single currency needs no conversion), matching the real backend's
+    // fallback of returning null when it can't safely produce a total.
+    const combined =
+      currencies.length === 1
+        ? {
+            currency: currencies[0].currency,
+            monthlyCommitment: currencies[0].monthlyCommitment,
+            annualRunRate: currencies[0].annualRunRate,
+            ratesAsOf: null,
+            approximate: false,
+          }
+        : null;
+    return [200, { asOf: nowIso(), currencies, combined }];
   });
 
   mock.onGet('/analytics/spend-trend').reply((config) => {

@@ -103,9 +103,21 @@ export interface CurrencyOverview {
   byCategory: { category: string; monthlyCommitment: string; percentage: string }[];
 }
 
+export interface CombinedTotal {
+  currency: string;
+  monthlyCommitment: string;
+  annualRunRate: string;
+  /** ECB rate date used for conversion, or null when nothing needed converting. */
+  ratesAsOf: string | null;
+  /** False only when every subscription already shares one currency. */
+  approximate: boolean;
+}
+
 export interface OverviewResult {
   asOf: string;
   currencies: CurrencyOverview[];
+  /** All currencies combined into one figure, or null if FX conversion failed. */
+  combined: CombinedTotal | null;
 }
 
 export interface TrendPoint {
