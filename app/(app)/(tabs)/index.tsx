@@ -39,8 +39,17 @@ export default function OverviewScreen() {
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const { data, isLoading, isError, refetch, isRefetching } = useSubscriptions();
-  const { data: overview, isLoading: isLoadingOverview } = useOverview();
+  const {
+    data: overview,
+    isLoading: isLoadingOverview,
+    isError: isOverviewError,
+    refetch: refetchOverview,
+  } = useOverview();
   const { onScroll } = useTabBarScroll();
+
+  async function handleRefresh() {
+    await Promise.all([refetch(), refetchOverview()]);
+  }
 
   const [activeGroup, setActiveGroup] = useState<RenewalGroup | null>(null);
   const [forecastRange, setForecastRange] = useState<ForecastRange>(6);
@@ -90,7 +99,7 @@ export default function OverviewScreen() {
       onScroll={onScroll}
       scrollEventThrottle={16}
       refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.indigo} />
+        <RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor={colors.indigo} />
       }
     >
       <View style={styles.header}>
@@ -129,6 +138,9 @@ export default function OverviewScreen() {
           />
 
           {isError ? <Text style={styles.error}>Couldn't refresh — showing the last data.</Text> : null}
+          {isOverviewError ? (
+            <Text style={styles.error}>Couldn't load spend totals — pull down to retry.</Text>
+          ) : null}
 
           <SectionHeader
             label="Coming up"

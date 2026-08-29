@@ -5,12 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AmountText } from '@/src/components/AmountText';
 import { Icon, type IconName } from '@/src/components/Icon';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { pickPrimaryCurrency, useOverview } from '@/src/hooks/useAnalytics';
 import { useAuth } from '@/src/hooks/useAuth';
 import { usePurchases } from '@/src/hooks/usePurchases';
-import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { useTheme, type ThemeModePreference } from '@/src/hooks/useTheme';
 import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
-import { monthlyTotal, scopeSubscriptionsByCurrency } from '@/src/utils/money';
 
 const APPEARANCE_OPTIONS: {
   value: ThemeModePreference;
@@ -27,23 +26,22 @@ export default function AccountScreen() {
   const router = useRouter();
   const { user, logout, deleteAccount } = useAuth();
   const { isPro, managementUrl } = usePurchases();
-  const { data: subscriptions } = useSubscriptions();
+  const { data: overview } = useOverview();
   const { colors, text: t, mode, setMode } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const subs = useMemo(() => subscriptions ?? [], [subscriptions]);
-  const activeCount = useMemo(
-    () => subs.filter((subscription) => subscription.status === 'active').length,
-    [subs],
+  const { primary, excludedCount, excludedCurrencies } = useMemo(
+    () => pickPrimaryCurrency(overview?.currencies ?? []),
+    [overview],
   );
-  const currencyScope = useMemo(() => scopeSubscriptionsByCurrency(subs), [subs]);
-  const stats = useMemo(() => {
-    const monthly = monthlyTotal(currencyScope.included);
-    return { total: activeCount, monthly, yearly: monthly * 12 };
-  }, [activeCount, currencyScope.included]);
+  const stats = {
+    total: primary?.activeCount ?? 0,
+    monthly: primary ? Number(primary.monthlyCommitment) : 0,
+    yearly: primary ? Number(primary.annualRunRate) : 0,
+  };
 
-  const currency = currencyScope.currency;
+  const currency = primary?.currency ?? 'INR';
   const email = user?.email?.trim();
   const initial = email?.[0]?.toUpperCase();
 
@@ -156,10 +154,10 @@ export default function AccountScreen() {
           </View>
         </View>
 
-        {currencyScope.excludedCount > 0 ? (
+        {excludedCount > 0 ? (
           <Text style={styles.passScope}>
-            {currency} totals · {currencyScope.excludedCount} in{' '}
-            {currencyScope.excludedCurrencies.join(', ')} shown separately
+            {currency} totals · {excludedCount} in{' '}
+            {excludedCurrencies.join(', ')} shown separately
           </Text>
         ) : null}
 

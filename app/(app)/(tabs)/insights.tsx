@@ -27,7 +27,7 @@ export default function InsightsScreen() {
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const { data, isLoading } = useSubscriptions();
   const { data: overview, isLoading: isLoadingOverview } = useOverview();
-  const { data: aiInsights, isLoading: isLoadingAiInsights } = useInsights();
+  const { data: aiInsights, isLoading: isLoadingAiInsights, isError: isAiInsightsError } = useInsights();
   const refreshAiInsights = useRefreshInsights();
   const [isRefreshingAiInsights, setIsRefreshingAiInsights] = useState(false);
   const { onScroll } = useTabBarScroll();
@@ -168,33 +168,29 @@ export default function InsightsScreen() {
           <SectionHeader label="By category" />
           <CategoryBreakdown entries={byCategory} currency={currency} periodLabel="MONTHLY TOTAL" />
 
-          {isLoadingAiInsights || (aiInsights?.insights.length ?? 0) > 0 ? (
-            <>
-              <SectionHeader
-                label="AI insights"
-                trailing={
-                  <Pressable
-                    onPress={handleRefreshAiInsights}
-                    disabled={isRefreshingAiInsights}
-                    hitSlop={8}
-                  >
-                    {isRefreshingAiInsights ? (
-                      <ActivityIndicator size="small" color={colors.indigo} />
-                    ) : (
-                      <Text style={styles.aiRefresh}>Refresh</Text>
-                    )}
-                  </Pressable>
-                }
-              />
-              {isLoadingAiInsights ? (
-                <SkeletonList count={2} />
-              ) : (
-                aiInsights?.insights.map((body, index) => (
-                  <InsightCard key={index} icon="chart" title="AI insight" body={body} accent="cyan" />
-                ))
-              )}
-            </>
-          ) : null}
+          <SectionHeader
+            label="AI insights"
+            trailing={
+              <Pressable onPress={handleRefreshAiInsights} disabled={isRefreshingAiInsights} hitSlop={8}>
+                {isRefreshingAiInsights ? (
+                  <ActivityIndicator size="small" color={colors.indigo} />
+                ) : (
+                  <Text style={styles.aiRefresh}>Refresh</Text>
+                )}
+              </Pressable>
+            }
+          />
+          {isLoadingAiInsights ? (
+            <SkeletonList count={2} />
+          ) : isAiInsightsError ? (
+            <Text style={t.caption}>Couldn't load AI insights — tap Refresh to retry.</Text>
+          ) : aiInsights && aiInsights.insights.length === 0 ? (
+            <Text style={t.caption}>No AI insights yet — add a few subscriptions first.</Text>
+          ) : (
+            aiInsights?.insights.map((body, index) => (
+              <InsightCard key={index} icon="chart" title="AI insight" body={body} accent="cyan" />
+            ))
+          )}
 
           {insights.length > 0 ? (
             <>

@@ -1,24 +1,10 @@
 import type { Subscription } from '@/src/types';
-import { monthlyCost, monthlyTotal } from '@/src/utils/money';
 
 const DAY = 24 * 60 * 60 * 1000;
 
 /** Midnight-normalised timestamp for a subscription's next renewal. */
 function renewalTime(sub: Subscription): number {
   return new Date(sub.nextRenewalDate).getTime();
-}
-
-/** Annual spend grouped by category, biggest first. */
-export function spendByCategory(subs: Subscription[]): { category: string; amount: number }[] {
-  const totals = new Map<string, number>();
-  for (const sub of subs) {
-    if (sub.status !== 'active') continue;
-    const key = sub.category ?? 'Other';
-    totals.set(key, (totals.get(key) ?? 0) + monthlyCost(sub) * 12);
-  }
-  return [...totals.entries()]
-    .map(([category, amount]) => ({ category, amount }))
-    .sort((a, b) => b.amount - a.amount);
 }
 
 export interface RenewalGroup {
@@ -102,5 +88,3 @@ export function longDate(iso: string): string {
     year: 'numeric',
   });
 }
-
-export { monthlyCost, monthlyTotal };

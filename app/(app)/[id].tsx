@@ -7,16 +7,19 @@ import { CategoryChip } from '@/src/components/CategoryChip';
 import { KeyValueRow } from '@/src/components/KeyValueRow';
 import { Screen } from '@/src/components/Screen';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { SectionHeader } from '@/src/components/SectionHeader';
 import { SkeletonList } from '@/src/components/SkeletonRow';
 import { SubscriptionIcon } from '@/src/components/SubscriptionIcon';
 import {
   useDeleteSubscription,
+  useForecastOccurrences,
   usePauseSubscription,
   useResumeSubscription,
   useSubscription,
 } from '@/src/hooks/useSubscriptions';
 import { useTheme } from '@/src/hooks/useTheme';
 import { gutter, space, type Palette, type TextStyles } from '@/src/theme';
+import { formatMoney } from '@/src/utils/money';
 import { longDate } from '@/src/utils/subscriptions';
 
 const formatDate = longDate;
@@ -26,6 +29,7 @@ export default function DetailScreen() {
   const id = typeof params.id === 'string' ? params.id : undefined;
   const router = useRouter();
   const { data: subscription, isLoading, isError } = useSubscription(id);
+  const { data: occurrences } = useForecastOccurrences(id, 6);
   const deleteMutation = useDeleteSubscription();
   const pauseMutation = usePauseSubscription();
   const resumeMutation = useResumeSubscription();
@@ -122,6 +126,20 @@ export default function DetailScreen() {
           />
           {subscription.note ? <KeyValueRow label="Note" value={subscription.note} last /> : null}
         </View>
+
+        {occurrences && occurrences.length > 0 ? (
+          <View style={styles.details}>
+            <SectionHeader label="Next renewals" />
+            {occurrences.slice(0, 5).map((occurrence, index, list) => (
+              <KeyValueRow
+                key={occurrence.date}
+                label={formatDate(occurrence.date)}
+                value={formatMoney(Number(occurrence.amount), occurrence.currency)}
+                last={index === list.length - 1}
+              />
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.actions}>
           <Button
