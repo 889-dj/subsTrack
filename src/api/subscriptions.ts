@@ -1,5 +1,10 @@
 import { http } from '@/src/api/http';
-import type { Subscription, SubscriptionInput, SubscriptionListResponse } from '@/src/types';
+import type {
+  ForecastOccurrence,
+  Subscription,
+  SubscriptionInput,
+  SubscriptionListResponse,
+} from '@/src/types';
 
 export async function fetchSubscriptions(): Promise<Subscription[]> {
   const { data } = await http.get<SubscriptionListResponse>('/subscriptions');
@@ -36,4 +41,15 @@ export async function pauseSubscription(id: string): Promise<Subscription> {
 export async function resumeSubscription(id: string): Promise<Subscription> {
   const { data } = await http.post<Subscription>(`/subscriptions/${id}/resume`, {});
   return data;
+}
+
+export async function fetchForecastOccurrences(
+  id: string,
+  months = 6,
+): Promise<ForecastOccurrence[]> {
+  const { data } = await http.get<{ items: ForecastOccurrence[] }>(
+    `/subscriptions/${id}/forecast-occurrences`,
+    { params: { months } },
+  );
+  return data.items;
 }

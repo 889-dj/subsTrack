@@ -82,6 +82,54 @@ export interface User {
   email: string;
 }
 
+export interface InsightsResult {
+  insights: string[];
+  generatedAt: string | null;
+}
+
+/**
+ * Server-computed spend numbers for one currency. Money fields are decimal
+ * strings (as the backend serializes them) — parse with Number() at the
+ * point of use, never re-derive them from raw subscriptions client-side.
+ */
+export interface CurrencyOverview {
+  currency: string;
+  monthlyCommitment: string;
+  annualRunRate: string;
+  activeCount: number;
+  currentMonthScheduled: string;
+  previousMonthScheduled: string;
+  changePercent: string | null;
+  byCategory: { category: string; monthlyCommitment: string; percentage: string }[];
+}
+
+export interface OverviewResult {
+  asOf: string;
+  currencies: CurrencyOverview[];
+}
+
+export interface TrendPoint {
+  month: string; // "YYYY-MM"
+  scheduledAmount: string;
+  renewalCount: number;
+}
+
+export interface CurrencyTrend {
+  currency: string;
+  points: TrendPoint[];
+}
+
+export interface SpendTrendResult {
+  series: CurrencyTrend[];
+}
+
+export interface ForecastOccurrence {
+  date: string;
+  amount: string;
+  currency: string;
+  estimated: true;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;

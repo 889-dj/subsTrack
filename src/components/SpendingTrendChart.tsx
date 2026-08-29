@@ -5,14 +5,15 @@ import { AmountText } from '@/src/components/AmountText';
 import { Icon } from '@/src/components/Icon';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font, radius, space, type Palette, type TextStyles } from '@/src/theme';
-import { CURRENCIES, type Subscription } from '@/src/types';
+import { CURRENCIES } from '@/src/types';
 import { formatMoney } from '@/src/utils/money';
-import { renewalForecast, type RenewalForecastPoint } from '@/src/utils/subscriptions';
+import type { RenewalForecastPoint } from '@/src/utils/subscriptions';
 
 export type ForecastRange = 3 | 6 | 12;
 
 interface SpendingTrendChartProps {
-  subscriptions: Subscription[];
+  /** Server-computed forecast points — see GET /v1/analytics/spend-trend. */
+  data: RenewalForecastPoint[];
   currency: string;
   months: ForecastRange;
   onMonthsChange: (months: ForecastRange) => void;
@@ -26,9 +27,9 @@ const RANGE_OPTIONS: { value: ForecastRange; label: string }[] = [
   { value: 12, label: 'Next 12 months' },
 ];
 
-/** Future renewal charges by calendar month, based on each saved cadence. */
+/** Future renewal charges by calendar month, from the backend's spend-trend series. */
 export function SpendingTrendChart({
-  subscriptions,
+  data: points,
   currency,
   months,
   onMonthsChange,
@@ -36,10 +37,7 @@ export function SpendingTrendChart({
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const [active, setActive] = useState<ForecastDatum | null>(null);
-  const data = useMemo(
-    () => renewalForecast(subscriptions, months) as ForecastDatum[],
-    [subscriptions, months],
-  );
+  const data = points as ForecastDatum[];
   const periodTotal = data.reduce((sum, point) => sum + point.amount, 0);
   const renewalCount = data.reduce((sum, point) => sum + point.count, 0);
   const selectedRange = RANGE_OPTIONS.find((option) => option.value === months) ?? RANGE_OPTIONS[1];

@@ -17,16 +17,13 @@ import {
 import { TAB_BAR_CLEARANCE } from '@/src/components/BottomNav';
 import { UpcomingPayment } from '@/src/components/UpcomingPayment';
 import { useAuth } from '@/src/hooks/useAuth';
+import { pickPrimaryCurrency, useOverview, useSpendTrend } from '@/src/hooks/useAnalytics';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { font, gutter, space, type Palette, type TextStyles } from '@/src/theme';
-import { monthlyTotal, scopeSubscriptionsByCurrency } from '@/src/utils/money';
-import {
-  groupByRenewalDate,
-  scheduledRenewalTotalForMonth,
-  type RenewalGroup,
-} from '@/src/utils/subscriptions';
+import { groupByRenewalDate, type RenewalGroup } from '@/src/utils/subscriptions';
+import type { RenewalForecastPoint } from '@/src/utils/subscriptions';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -42,6 +39,7 @@ export default function OverviewScreen() {
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const { data, isLoading, isError, refetch, isRefetching } = useSubscriptions();
+  const { data: overview, isLoading: isLoadingOverview } = useOverview();
   const { onScroll } = useTabBarScroll();
 
   const [activeGroup, setActiveGroup] = useState<RenewalGroup | null>(null);
@@ -52,22 +50,29 @@ export default function OverviewScreen() {
     () => subs.filter((subscription) => subscription.status === 'active'),
     [subs],
   );
-  const currencyScope = useMemo(() => scopeSubscriptionsByCurrency(subs), [subs]);
-  const monthly = useMemo(() => monthlyTotal(currencyScope.included), [currencyScope.included]);
-  const yearly = monthly * 12;
-  const currency = currencyScope.currency;
-  const monthChange = useMemo(() => {
-    const now = new Date();
-    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const thisMonthTotal = scheduledRenewalTotalForMonth(currencyScope.included, now);
-    const previousMonthTotal = scheduledRenewalTotalForMonth(
-      currencyScope.included,
-      previousMonth,
-    );
 
-    if (previousMonthTotal === 0) return thisMonthTotal === 0 ? 0 : null;
-    return ((thisMonthTotal - previousMonthTotal) / previousMonthTotal) * 100;
-  }, [currencyScope.included]);
+  const { primary, excludedCount, excludedCurrencies } = useMemo(
+    () => pickPrimaryCurrency(overview?.currencies ?? []),
+    [overview],
+  );
+  const currency = primary?.currency ?? 'INR';
+  const monthly = primary ? Number(primary.monthlyCommitment) : 0;
+  const yearly = primary ? Number(primary.annualRunRate) : 0;
+  const monthChange = primary?.changePercent != null ? Number(primary.changePercent) : null;
+
+  const { data: trend } = useSpendTrend(forecastRange, primary?.currency);
+  const forecastPoints = useMemo<RenewalForecastPoint[]>(() => {
+    const points = trend?.series.find((s) => s.currency === currency)?.points ?? [];
+    return points.map((point) => {
+      const [year, month] = point.month.split('-').map(Number);
+      return {
+        monthKey: point.month,
+        label: new Date(year, month - 1, 1).toLocaleDateString('en-IN', { month: 'short' }),
+        amount: Number(point.scheduledAmount),
+        count: point.renewalCount,
+      };
+    });
+  }, [trend, currency]);
 
   const renewalGroups = useMemo(() => groupByRenewalDate(subs), [subs]);
   const upcomingGroups = useMemo(() => renewalGroups.slice(0, 5), [renewalGroups]);
@@ -106,7 +111,7 @@ export default function OverviewScreen() {
         </Pressable>
       </View>
 
-      {isLoading ? (
+      {isLoading || isLoadingOverview ? (
         <SkeletonList count={5} />
       ) : (
         <>
@@ -114,11 +119,11 @@ export default function OverviewScreen() {
             monthly={monthly}
             yearly={yearly}
             currency={currency}
-            activeCount={activeSubs.length}
+            activeCount={primary?.activeCount ?? 0}
             deltaPercent={monthChange}
             scopeNote={
-              currencyScope.excludedCount > 0
-                ? `${currency} totals only · ${currencyScope.excludedCount} subscription${currencyScope.excludedCount === 1 ? '' : 's'} in ${currencyScope.excludedCurrencies.join(', ')} shown separately`
+              excludedCount > 0
+                ? `${currency} totals only · ${excludedCount} subscription${excludedCount === 1 ? '' : 's'} in ${excludedCurrencies.join(', ')} shown separately`
                 : undefined
             }
           />
@@ -166,7 +171,7 @@ export default function OverviewScreen() {
           <SectionHeader label="Renewal forecast" />
           {activeSubs.length > 0 ? (
             <SpendingTrendChart
-              subscriptions={currencyScope.included}
+              data={forecastPoints}
               currency={currency}
               months={forecastRange}
               onMonthsChange={setForecastRange}

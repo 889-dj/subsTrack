@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { TAB_BAR_CLEARANCE } from '@/src/components/BottomNav';
@@ -10,17 +10,14 @@ import { InsightCard } from '@/src/components/InsightCard';
 import { Money } from '@/src/components/Money';
 import { SectionHeader } from '@/src/components/SectionHeader';
 import { SkeletonList } from '@/src/components/SkeletonRow';
+import { pickPrimaryCurrency, useOverview } from '@/src/hooks/useAnalytics';
+import { useInsights, useRefreshInsights } from '@/src/hooks/useInsights';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
 import { gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
-import {
-  formatCompactMoney,
-  monthlyCost,
-  monthlyTotal,
-  scopeSubscriptionsByCurrency,
-} from '@/src/utils/money';
-import { spendByCategory, upcoming } from '@/src/utils/subscriptions';
+import { formatCompactMoney, monthlyCost } from '@/src/utils/money';
+import { upcoming } from '@/src/utils/subscriptions';
 
 type Accent = 'indigo' | 'cyan' | 'pink' | 'warning' | 'saved';
 
@@ -29,6 +26,10 @@ export default function InsightsScreen() {
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const { data, isLoading } = useSubscriptions();
+  const { data: overview, isLoading: isLoadingOverview } = useOverview();
+  const { data: aiInsights, isLoading: isLoadingAiInsights } = useInsights();
+  const refreshAiInsights = useRefreshInsights();
+  const [isRefreshingAiInsights, setIsRefreshingAiInsights] = useState(false);
   const { onScroll } = useTabBarScroll();
 
   const subs = useMemo(() => data ?? [], [data]);
@@ -36,12 +37,26 @@ export default function InsightsScreen() {
     () => subs.filter((subscription) => subscription.status === 'active'),
     [subs],
   );
-  const currencyScope = useMemo(() => scopeSubscriptionsByCurrency(subs), [subs]);
-  const scopedSubs = currencyScope.included;
-  const monthly = useMemo(() => monthlyTotal(scopedSubs), [scopedSubs]);
-  const yearly = monthly * 12;
-  const currency = currencyScope.currency;
-  const byCategory = useMemo(() => spendByCategory(scopedSubs), [scopedSubs]);
+
+  const { primary, excludedCount, excludedCurrencies } = useMemo(
+    () => pickPrimaryCurrency(overview?.currencies ?? []),
+    [overview],
+  );
+  const currency = primary?.currency ?? 'INR';
+  const monthly = primary ? Number(primary.monthlyCommitment) : 0;
+  const yearly = primary ? Number(primary.annualRunRate) : 0;
+  const byCategory = useMemo(
+    () =>
+      (primary?.byCategory ?? []).map((c) => ({
+        category: c.category,
+        amount: Number(c.monthlyCommitment),
+      })),
+    [primary],
+  );
+  const scopedSubs = useMemo(
+    () => activeSubs.filter((s) => s.currency === currency),
+    [activeSubs, currency],
+  );
 
   const insights = useMemo(() => {
     if (activeSubs.length === 0) return [];
@@ -78,7 +93,7 @@ export default function InsightsScreen() {
         body: `${byCategory[0].category} is your largest category at ${formatCompactMoney(
           byCategory[0].amount,
           currency,
-        )} a year.`,
+        )} a month.`,
       });
     }
 
@@ -97,6 +112,15 @@ export default function InsightsScreen() {
     return list;
   }, [activeSubs, scopedSubs, monthly, byCategory, currency]);
 
+  async function handleRefreshAiInsights() {
+    setIsRefreshingAiInsights(true);
+    try {
+      await refreshAiInsights();
+    } finally {
+      setIsRefreshingAiInsights(false);
+    }
+  }
+
   return (
     <Animated.ScrollView
       style={styles.screen}
@@ -112,7 +136,7 @@ export default function InsightsScreen() {
       <Text style={t.heading}>Insights</Text>
       <Text style={styles.subtitle}>Understand your recurring spending</Text>
 
-      {isLoading ? (
+      {isLoading || isLoadingOverview ? (
         <SkeletonList count={5} />
       ) : activeSubs.length === 0 ? (
         <EmptyState
@@ -132,17 +156,45 @@ export default function InsightsScreen() {
               {formatCompactMoney(monthly, currency)} each month across {scopedSubs.length}{' '}
               {currency} subscription{scopedSubs.length === 1 ? '' : 's'}.
             </Text>
-            {currencyScope.excludedCount > 0 ? (
+            {excludedCount > 0 ? (
               <Text style={styles.heroScope}>
-                {currencyScope.excludedCount} subscription
-                {currencyScope.excludedCount === 1 ? '' : 's'} in{' '}
-                {currencyScope.excludedCurrencies.join(', ')} excluded from this total.
+                {excludedCount} subscription
+                {excludedCount === 1 ? '' : 's'} in{' '}
+                {excludedCurrencies.join(', ')} excluded from this total.
               </Text>
             ) : null}
           </View>
 
           <SectionHeader label="By category" />
-          <CategoryBreakdown entries={byCategory} currency={currency} />
+          <CategoryBreakdown entries={byCategory} currency={currency} periodLabel="MONTHLY TOTAL" />
+
+          {isLoadingAiInsights || (aiInsights?.insights.length ?? 0) > 0 ? (
+            <>
+              <SectionHeader
+                label="AI insights"
+                trailing={
+                  <Pressable
+                    onPress={handleRefreshAiInsights}
+                    disabled={isRefreshingAiInsights}
+                    hitSlop={8}
+                  >
+                    {isRefreshingAiInsights ? (
+                      <ActivityIndicator size="small" color={colors.indigo} />
+                    ) : (
+                      <Text style={styles.aiRefresh}>Refresh</Text>
+                    )}
+                  </Pressable>
+                }
+              />
+              {isLoadingAiInsights ? (
+                <SkeletonList count={2} />
+              ) : (
+                aiInsights?.insights.map((body, index) => (
+                  <InsightCard key={index} icon="chart" title="AI insight" body={body} accent="cyan" />
+                ))
+              )}
+            </>
+          ) : null}
 
           {insights.length > 0 ? (
             <>
@@ -205,5 +257,9 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       borderTopWidth: 1,
       borderTopColor: colors.hairline,
       fontSize: 12,
+    },
+    aiRefresh: {
+      ...t.caption,
+      color: colors.indigo,
     },
   });

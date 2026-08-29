@@ -9,15 +9,12 @@ import { FilterChips } from '@/src/components/FilterChips';
 import { SearchBar } from '@/src/components/SearchBar';
 import { SkeletonList } from '@/src/components/SkeletonRow';
 import { SubscriptionCard } from '@/src/components/SubscriptionCard';
+import { pickPrimaryCurrency, useOverview } from '@/src/hooks/useAnalytics';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
 import { gutter, space, type Palette, type TextStyles } from '@/src/theme';
-import {
-  formatCompactMoney,
-  monthlyTotal,
-  scopeSubscriptionsByCurrency,
-} from '@/src/utils/money';
+import { formatCompactMoney } from '@/src/utils/money';
 
 export default function SubscriptionsScreen() {
   const router = useRouter();
@@ -25,6 +22,7 @@ export default function SubscriptionsScreen() {
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const { data, isLoading, refetch, isRefetching } = useSubscriptions();
+  const { data: overview } = useOverview();
   const { onScroll } = useTabBarScroll();
 
   const [query, setQuery] = useState('');
@@ -35,9 +33,12 @@ export default function SubscriptionsScreen() {
     () => subs.filter((subscription) => subscription.status === 'active').length,
     [subs],
   );
-  const currencyScope = useMemo(() => scopeSubscriptionsByCurrency(subs), [subs]);
-  const monthly = useMemo(() => monthlyTotal(currencyScope.included), [currencyScope.included]);
-  const currency = currencyScope.currency;
+  const { primary, excludedCount, excludedCurrencies } = useMemo(
+    () => pickPrimaryCurrency(overview?.currencies ?? []),
+    [overview],
+  );
+  const monthly = primary ? Number(primary.monthlyCommitment) : 0;
+  const currency = primary?.currency ?? 'INR';
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -77,11 +78,11 @@ export default function SubscriptionsScreen() {
             {formatCompactMoney(monthly, currency)}/month
           </Text>
         </View>
-        {currencyScope.excludedCount > 0 ? (
+        {excludedCount > 0 ? (
           <Text style={styles.scopeHint}>
-            Total shows {currency}; {currencyScope.excludedCount} subscription
-            {currencyScope.excludedCount === 1 ? '' : 's'} in{' '}
-            {currencyScope.excludedCurrencies.join(', ')} remain separate.
+            Total shows {currency}; {excludedCount} subscription
+            {excludedCount === 1 ? '' : 's'} in{' '}
+            {excludedCurrencies.join(', ')} remain separate.
           </Text>
         ) : null}
 

@@ -20,6 +20,14 @@ export function useSubscription(id: string | undefined) {
   });
 }
 
+export function useForecastOccurrences(id: string | undefined, months = 6) {
+  return useQuery({
+    queryKey: [...subscriptionKey(id ?? ''), 'forecast-occurrences', months] as const,
+    queryFn: () => api.fetchForecastOccurrences(id!, months),
+    enabled: !!id,
+  });
+}
+
 export function useAddSubscription() {
   const queryClient = useQueryClient();
   return useMutation({
