@@ -1,5 +1,6 @@
 import { http } from '@/src/api/http';
 import type {
+  CalendarOccurrencesResult,
   ForecastOccurrence,
   Subscription,
   SubscriptionInput,
@@ -52,4 +53,12 @@ export async function fetchForecastOccurrences(
     { params: { months } },
   );
   return data.items;
+}
+
+/** @param month "YYYY-MM"; defaults to the current month server-side if omitted. */
+export async function fetchCalendarOccurrences(month?: string): Promise<CalendarOccurrencesResult> {
+  const { data } = await http.get<CalendarOccurrencesResult>('/subscriptions/calendar', {
+    params: month ? { month } : undefined,
+  });
+  return data;
 }

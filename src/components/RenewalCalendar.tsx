@@ -2,13 +2,19 @@ import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font, radius, space, type Palette, type TextStyles } from '@/src/theme';
-import type { RenewalGroup } from '@/src/utils/subscriptions';
 import { dayKey } from '@/src/utils/subscriptions';
+
+/** Only `subs.length` and each item's `id` are read — any renewal-group shape works. */
+interface DayGroup {
+  dateKey: string;
+  date: Date;
+  subs: { id: string }[];
+}
 
 interface RenewalCalendarProps {
   /** First-of-month anchor — only year/month are read. */
   month: Date;
-  groups: RenewalGroup[];
+  groups: DayGroup[];
   selectedKey: string | null;
   onSelectDay: (date: Date) => void;
 }

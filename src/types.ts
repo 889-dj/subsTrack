@@ -142,6 +142,22 @@ export interface ForecastOccurrence {
   estimated: true;
 }
 
+/** One projected renewal within a calendar month — see GET /v1/subscriptions/calendar. */
+export interface CalendarOccurrence {
+  subscriptionId: string;
+  name: string;
+  cost: string;
+  currency: string;
+  logoUrl: string | null;
+  billingCycle: BillingCycle;
+  date: string;
+}
+
+export interface CalendarOccurrencesResult {
+  month: string;
+  items: CalendarOccurrence[];
+}
+
 export interface AuthResponse {
   token: string;
   user: User;

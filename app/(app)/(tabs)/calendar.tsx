@@ -10,47 +10,76 @@ import { Icon } from '@/src/components/Icon';
 import { RenewalCalendar } from '@/src/components/RenewalCalendar';
 import { SectionHeader } from '@/src/components/SectionHeader';
 import { SkeletonList } from '@/src/components/SkeletonRow';
-import { SubscriptionCard } from '@/src/components/SubscriptionCard';
-import { useSubscriptions } from '@/src/hooks/useSubscriptions';
+import { SubscriptionIcon } from '@/src/components/SubscriptionIcon';
+import { useCalendarOccurrences } from '@/src/hooks/useSubscriptions';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
-import { gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
-import { dayKey, groupByRenewalDate, longDate } from '@/src/utils/subscriptions';
+import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
+import type { CalendarOccurrence } from '@/src/types';
+import { dayKey, longDate, shortDate } from '@/src/utils/subscriptions';
 
 const MONTH_LABEL = (d: Date) => d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+
+function monthParam(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+interface DayOccurrences {
+  dateKey: string;
+  date: Date;
+  occurrences: CalendarOccurrence[];
+  total: number;
+}
 
 export default function CalendarScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
-  const { data, isLoading } = useSubscriptions();
   const { onScroll } = useTabBarScroll();
-
-  const subs = useMemo(() => data ?? [], [data]);
-  const groups = useMemo(() => groupByRenewalDate(subs), [subs]);
-  const groupMap = useMemo(() => new Map(groups.map((g) => [g.dateKey, g])), [groups]);
 
   const [month, setMonth] = useState(() => {
     const d = new Date();
     d.setDate(1);
     return d;
   });
+  const { data, isLoading } = useCalendarOccurrences(monthParam(month));
+
+  // Every occurrence this month lands on, projected from each subscription's
+  // billing cycle — not just subscriptions whose single stored renewal date
+  // happens to fall here. See GET /v1/subscriptions/calendar.
+  const dayGroups = useMemo(() => {
+    const map = new Map<string, DayOccurrences>();
+    for (const occ of data?.items ?? []) {
+      const date = new Date(occ.date);
+      const key = dayKey(date);
+      const existing = map.get(key);
+      if (existing) {
+        existing.occurrences.push(occ);
+        existing.total += Number(occ.cost);
+      } else {
+        map.set(key, { dateKey: key, date, occurrences: [occ], total: Number(occ.cost) });
+      }
+    }
+    return [...map.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [data]);
+  const dayGroupMap = useMemo(() => new Map(dayGroups.map((g) => [g.dateKey, g])), [dayGroups]);
+  const calendarGroups = useMemo(
+    () =>
+      dayGroups.map((g) => ({
+        dateKey: g.dateKey,
+        date: g.date,
+        subs: g.occurrences.map((o) => ({ id: o.subscriptionId })),
+      })),
+    [dayGroups],
+  );
+
   const [selected, setSelected] = useState<Date | null>(null);
   const selectedKey = selected ? dayKey(selected) : null;
-  const selectedGroup = selectedKey ? groupMap.get(selectedKey) : undefined;
+  const selectedGroup = selectedKey ? dayGroupMap.get(selectedKey) : undefined;
   const selectedGroupHasMixedCurrencies = selectedGroup
-    ? new Set(selectedGroup.subs.map((sub) => sub.currency)).size > 1
+    ? new Set(selectedGroup.occurrences.map((o) => o.currency)).size > 1
     : false;
-  const monthGroups = useMemo(
-    () =>
-      groups.filter(
-        (group) =>
-          group.date.getFullYear() === month.getFullYear() &&
-          group.date.getMonth() === month.getMonth(),
-      ),
-    [groups, month],
-  );
 
   function shiftMonth(delta: number) {
     setMonth((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
@@ -101,7 +130,7 @@ export default function CalendarScreen() {
           <View style={styles.calendarCard}>
             <RenewalCalendar
               month={month}
-              groups={groups}
+              groups={calendarGroups}
               selectedKey={selectedKey}
               onSelectDay={setSelected}
             />
@@ -111,37 +140,38 @@ export default function CalendarScreen() {
             <View style={styles.dayPanel}>
               <Text style={styles.dayPanelTitle}>{longDate(selected.toISOString())}</Text>
               <Text style={styles.dayPanelSubtitle}>
-                {selectedGroup.subs.length} subscription{selectedGroup.subs.length === 1 ? '' : 's'} ·{' '}
+                {selectedGroup.occurrences.length} subscription
+                {selectedGroup.occurrences.length === 1 ? '' : 's'} ·{' '}
                 {selectedGroupHasMixedCurrencies ? (
                   'multiple currencies'
                 ) : (
                   <AmountText
                     value={selectedGroup.total}
-                    currency={selectedGroup.subs[0].currency}
+                    currency={selectedGroup.occurrences[0].currency}
                     size={13}
                     tone="muted"
                   />
                 )}
               </Text>
-              {selectedGroup.subs.map((sub) => (
+              {selectedGroup.occurrences.map((occ) => (
                 <Pressable
-                  key={sub.id}
+                  key={occ.subscriptionId}
                   style={({ pressed }) => [styles.dayRow, pressed && styles.dayRowPressed]}
-                  onPress={() => router.push(`/${sub.id}`)}
+                  onPress={() => router.push(`/${occ.subscriptionId}`)}
                   accessibilityRole="button"
-                  accessibilityLabel={`Open ${sub.name}, ${sub.cost} ${sub.currency}`}
+                  accessibilityLabel={`Open ${occ.name}, ${occ.cost} ${occ.currency}`}
                 >
                   <Text style={t.body} numberOfLines={1}>
-                    {sub.name}
+                    {occ.name}
                   </Text>
-                  <AmountText value={sub.cost} currency={sub.currency} />
+                  <AmountText value={Number(occ.cost)} currency={occ.currency} />
                 </Pressable>
               ))}
             </View>
           ) : null}
 
           <SectionHeader label="Upcoming" />
-          {monthGroups.length === 0 ? (
+          {dayGroups.length === 0 ? (
             <EmptyState
               title={`Nothing renewing in ${month.toLocaleDateString('en-IN', { month: 'long' })}.`}
               subtitle="Choose another month or add a subscription."
@@ -150,14 +180,29 @@ export default function CalendarScreen() {
             />
           ) : (
             <View style={styles.upcomingList}>
-              {monthGroups.flatMap((group) =>
-                group.subs.map((sub) => (
-                  <SubscriptionCard
-                    key={sub.id}
-                    subscription={sub}
-                    variant="card"
-                    onPress={() => router.push(`/${sub.id}`)}
-                  />
+              {dayGroups.flatMap((group) =>
+                group.occurrences.map((occ) => (
+                  <Pressable
+                    key={`${occ.subscriptionId}-${occ.date}`}
+                    style={({ pressed }) => [styles.upcomingRow, pressed && styles.dayRowPressed]}
+                    onPress={() => router.push(`/${occ.subscriptionId}`)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${occ.name}, ${occ.cost} ${occ.currency}, renews ${shortDate(occ.date)}`}
+                  >
+                    <SubscriptionIcon name={occ.name} logoUrl={occ.logoUrl ?? undefined} size={44} />
+                    <View style={styles.upcomingCopy}>
+                      <Text style={styles.upcomingName} numberOfLines={1}>
+                        {occ.name}
+                      </Text>
+                      <Text style={styles.upcomingSubtitle}>
+                        {occ.billingCycle === 'yearly' ? 'Yearly' : 'Monthly'}
+                      </Text>
+                    </View>
+                    <View style={styles.upcomingRight}>
+                      <AmountText value={Number(occ.cost)} currency={occ.currency} tone="ink" />
+                      <Text style={styles.upcomingDate}>{shortDate(occ.date)}</Text>
+                    </View>
+                  </Pressable>
                 )),
               )}
             </View>
@@ -243,5 +288,37 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     },
     upcomingList: {
       width: '100%',
+    },
+    upcomingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+      width: '100%',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      borderRadius: radius.cardSm,
+      paddingHorizontal: space.lg,
+      paddingVertical: space.lg,
+      marginBottom: space.sm,
+    },
+    upcomingCopy: {
+      flex: 1,
+      gap: 2,
+    },
+    upcomingName: {
+      ...t.body,
+      fontFamily: font.sansSemi,
+    },
+    upcomingSubtitle: {
+      ...t.caption,
+    },
+    upcomingRight: {
+      alignItems: 'flex-end',
+      gap: 2,
+    },
+    upcomingDate: {
+      ...t.caption,
+      fontSize: 12,
     },
   });

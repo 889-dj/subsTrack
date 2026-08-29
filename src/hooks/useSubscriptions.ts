@@ -15,6 +15,7 @@ function invalidateSpendQueries(queryClient: ReturnType<typeof useQueryClient>):
   queryClient.invalidateQueries({ queryKey: subscriptionsKey });
   queryClient.invalidateQueries({ queryKey: ['analytics'] });
   queryClient.invalidateQueries({ queryKey: ['insights'] });
+  queryClient.invalidateQueries({ queryKey: ['calendar'] });
 }
 
 export function useSubscriptions() {
@@ -37,6 +38,14 @@ export function useForecastOccurrences(id: string | undefined, months = 6) {
     queryKey: [...subscriptionKey(id ?? ''), 'forecast-occurrences', months] as const,
     queryFn: () => api.fetchForecastOccurrences(id!, months),
     enabled: !!id,
+  });
+}
+
+/** @param month "YYYY-MM" — every renewal occurrence in that calendar month, across all subscriptions. */
+export function useCalendarOccurrences(month: string) {
+  return useQuery({
+    queryKey: ['calendar', month] as const,
+    queryFn: () => api.fetchCalendarOccurrences(month),
   });
 }
 

@@ -405,6 +405,52 @@ export function setupMockApi(): void {
     return [200, { items }];
   });
 
+  mock.onGet('/subscriptions/calendar').reply((config) => {
+    const userId = userIdFromToken(config.headers?.Authorization);
+    if (!userId) return [401, { message: 'Not authenticated.' }];
+    const now = new Date();
+    const [year, mon] = config.params?.month
+      ? (config.params.month as string).split('-').map(Number)
+      : [now.getFullYear(), now.getMonth() + 1];
+    const start = new Date(year, mon - 1, 1);
+    const end = new Date(year, mon, 1);
+
+    const items = subscriptions
+      .filter((s) => s.status === 'active')
+      .flatMap((sub) => {
+        const cadenceMonths = sub.billingCycle === 'yearly' ? 12 : 1;
+        let date = new Date(sub.nextRenewalDate);
+        let guard = 0;
+        // Walk to the first occurrence at or after `start`, either direction.
+        while (date >= end && guard < 240) {
+          date.setMonth(date.getMonth() - cadenceMonths);
+          guard += 1;
+        }
+        while (date < start && guard < 240) {
+          date.setMonth(date.getMonth() + cadenceMonths);
+          guard += 1;
+        }
+        const occurrences: { subscriptionId: string; name: string; cost: string; currency: string; logoUrl: string | null; billingCycle: string; date: string }[] = [];
+        while (date < end && guard < 300) {
+          occurrences.push({
+            subscriptionId: sub.id,
+            name: sub.name,
+            cost: sub.cost.toFixed(2),
+            currency: sub.currency,
+            logoUrl: sub.logoUrl ?? null,
+            billingCycle: sub.billingCycle,
+            date: date.toISOString(),
+          });
+          date = new Date(date);
+          date.setMonth(date.getMonth() + cadenceMonths);
+          guard += 1;
+        }
+        return occurrences;
+      });
+
+    return [200, { month: `${year}-${String(mon).padStart(2, '0')}`, items }];
+  });
+
   mock.onGet(/\/subscriptions\/.+/).reply((config) => {
     const userId = userIdFromToken(config.headers?.Authorization);
     if (!userId) return [401, { message: 'Not authenticated.' }];
