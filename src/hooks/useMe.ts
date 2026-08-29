@@ -31,3 +31,27 @@ export function useDeleteAvatar() {
     },
   });
 }
+
+export function useRegisterPushToken() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.registerPushToken,
+    onSuccess: ({ pushNotificationsEnabled }) => {
+      queryClient.setQueryData<MeResponse>(meKey, (prev) =>
+        prev ? { ...prev, pushNotificationsEnabled } : prev,
+      );
+    },
+  });
+}
+
+export function useUnregisterPushToken() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.unregisterPushToken,
+    onSuccess: () => {
+      queryClient.setQueryData<MeResponse>(meKey, (prev) =>
+        prev ? { ...prev, pushNotificationsEnabled: false } : prev,
+      );
+    },
+  });
+}

@@ -17,10 +17,17 @@ import { Icon, type IconName } from '@/src/components/Icon';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { useOverview, useSpendHeadline } from '@/src/hooks/useAnalytics';
 import { useAuth } from '@/src/hooks/useAuth';
-import { useDeleteAvatar, useMe, useUploadAvatar } from '@/src/hooks/useMe';
+import {
+  useDeleteAvatar,
+  useMe,
+  useRegisterPushToken,
+  useUnregisterPushToken,
+  useUploadAvatar,
+} from '@/src/hooks/useMe';
 import { usePurchases } from '@/src/hooks/usePurchases';
 import { useTheme, type ThemeModePreference } from '@/src/hooks/useTheme';
 import { pickImage } from '@/src/lib/imagePicker';
+import { registerForPushNotifications } from '@/src/lib/notifications';
 import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
 
 const APPEARANCE_OPTIONS: {
@@ -42,6 +49,8 @@ export default function AccountScreen() {
   const { data: me } = useMe();
   const uploadAvatarMutation = useUploadAvatar();
   const deleteAvatarMutation = useDeleteAvatar();
+  const registerPushTokenMutation = useRegisterPushToken();
+  const unregisterPushTokenMutation = useUnregisterPushToken();
   const { colors, text: t, mode, setMode } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -49,6 +58,8 @@ export default function AccountScreen() {
 
   const avatarUrl = me?.avatarUrl ?? undefined;
   const isUpdatingAvatar = uploadAvatarMutation.isPending || deleteAvatarMutation.isPending;
+  const isUpdatingNotifications =
+    registerPushTokenMutation.isPending || unregisterPushTokenMutation.isPending;
   useEffect(() => setAvatarLoadFailed(false), [avatarUrl]);
 
   const { currency, monthly, yearly, totalActiveCount, note: otherCurrenciesNote } =
@@ -104,6 +115,37 @@ export default function AccountScreen() {
     }
     options.push({ text: 'Cancel', style: 'cancel' });
     Alert.alert('Profile photo', undefined, options);
+  }
+
+  async function handleToggleNotifications() {
+    if (me?.pushNotificationsEnabled) {
+      unregisterPushTokenMutation.mutate(undefined, {
+        onError: () =>
+          Alert.alert("Couldn't turn off reminders", 'Please check your connection and try again.'),
+      });
+      return;
+    }
+
+    const outcome = await registerForPushNotifications();
+    switch (outcome.status) {
+      case 'unavailable':
+        Alert.alert('Update needed', 'Renewal reminders need a newer build of the app.');
+        return;
+      case 'unsupported-device':
+        Alert.alert('Not available', 'Push notifications need a physical device, not a simulator.');
+        return;
+      case 'permission-denied':
+        Alert.alert(
+          'Notifications blocked',
+          'Allow notifications in Settings to get renewal reminders.',
+        );
+        return;
+      case 'registered':
+        registerPushTokenMutation.mutate(outcome.token, {
+          onError: () =>
+            Alert.alert("Couldn't turn on reminders", 'Please check your connection and try again.'),
+        });
+    }
   }
 
   function handleLogout() {
@@ -273,6 +315,22 @@ export default function AccountScreen() {
             </Pressable>
           );
         })}
+      </View>
+
+      <Text style={styles.sectionTitle}>Notifications</Text>
+      <View style={styles.actionGroup}>
+        <SettingsRow
+          icon="notifications-outline"
+          label={
+            me?.pushNotificationsEnabled
+              ? 'Renewal reminders — On'
+              : 'Renewal reminders — Off'
+          }
+          onPress={handleToggleNotifications}
+          disabled={isUpdatingNotifications}
+          colors={colors}
+          styles={styles}
+        />
       </View>
 
       <Text style={styles.sectionTitle}>Account</Text>

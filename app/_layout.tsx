@@ -11,6 +11,7 @@ import { GeistMono_400Regular, GeistMono_500Medium } from '@expo-google-fonts/ge
 import { PanelUIProvider } from 'panelui-native';
 import { setupMockApi } from '@/src/api/mock';
 import { AuthProvider } from '@/src/hooks/useAuth';
+import { usePushNotifications } from '@/src/hooks/usePushNotifications';
 import { PurchasesProvider } from '@/src/hooks/usePurchases';
 import { ThemeProvider, useTheme } from '@/src/hooks/useTheme';
 import { palettes } from '@/src/theme';
@@ -63,6 +64,7 @@ export default function RootLayout() {
 
 function AppShell() {
   const { resolvedMode } = useTheme();
+  usePushNotifications();
   return (
     <>
       <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />

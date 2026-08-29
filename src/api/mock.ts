@@ -10,6 +10,7 @@ const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK_API !== 'false';
 interface StoredUser extends User {
   password: string;
   avatarUrl?: string | null;
+  pushToken?: string | null;
 }
 
 let users: StoredUser[] = [];
@@ -206,6 +207,7 @@ export function setupMockApi(): void {
         id: user.id,
         email: user.email,
         avatarUrl: user.avatarUrl ?? null,
+        pushNotificationsEnabled: Boolean(user.pushToken),
         isPro: false,
         proUntil: null,
         createdAt: nowIso(),
@@ -230,6 +232,24 @@ export function setupMockApi(): void {
     if (!userId || !user) return [401, { message: 'Not authenticated.' }];
     user.avatarUrl = null;
     return [200, { avatarUrl: null }];
+  });
+
+  mock.onPost('/me/push-token').reply((config) => {
+    const userId = userIdFromToken(config.headers?.Authorization);
+    const user = users.find((u) => u.id === userId);
+    if (!userId || !user) return [401, { message: 'Not authenticated.' }];
+    const { token } = JSON.parse(config.data);
+    if (!token) return [400, { message: 'token is required.' }];
+    user.pushToken = token;
+    return [200, { pushNotificationsEnabled: true }];
+  });
+
+  mock.onDelete('/me/push-token').reply((config) => {
+    const userId = userIdFromToken(config.headers?.Authorization);
+    const user = users.find((u) => u.id === userId);
+    if (!userId || !user) return [401, { message: 'Not authenticated.' }];
+    user.pushToken = null;
+    return [200, { pushNotificationsEnabled: false }];
   });
 
   // The real backend calls an external model; mock mode has no such thing to

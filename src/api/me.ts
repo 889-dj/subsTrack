@@ -3,6 +3,7 @@ import type { User } from '@/src/types';
 
 export interface MeResponse extends User {
   avatarUrl: string | null;
+  pushNotificationsEnabled: boolean;
   isPro: boolean;
   proUntil: string | null;
   createdAt: string;
@@ -39,4 +40,13 @@ export async function uploadAvatar(image: LocalImage): Promise<{ avatarUrl: stri
 
 export async function deleteAvatar(): Promise<void> {
   await http.delete('/me/avatar');
+}
+
+export async function registerPushToken(token: string): Promise<{ pushNotificationsEnabled: boolean }> {
+  const { data } = await http.post<{ pushNotificationsEnabled: boolean }>('/me/push-token', { token });
+  return data;
+}
+
+export async function unregisterPushToken(): Promise<void> {
+  await http.delete('/me/push-token');
 }
