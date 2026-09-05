@@ -18,12 +18,18 @@ export function usePushNotifications(): void {
     if (!isAuthenticated || attempted.current) return;
     attempted.current = true;
 
-    registerForPushNotifications().then((outcome) => {
-      if (outcome.status !== 'registered') return;
-      api.registerPushToken(outcome.token).catch(() => {
-        // Retried next app session — losing one reminder cycle isn't worth
-        // a retry loop for a background, non-critical feature.
+    registerForPushNotifications()
+      .then((outcome) => {
+        if (outcome.status !== 'registered') return;
+        api.registerPushToken(outcome.token).catch(() => {
+          // Retried next app session — losing one reminder cycle isn't worth
+          // a retry loop for a background, non-critical feature.
+        });
+      })
+      .catch(() => {
+        // Belt-and-braces: registerForPushNotifications() already catches
+        // everything internally, but an unhandled rejection here would
+        // otherwise surface as a fatal error in the root layout.
       });
-    });
   }, [isAuthenticated]);
 }

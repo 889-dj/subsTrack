@@ -44,20 +44,27 @@ export async function pickImage(): Promise<PickImageOutcome> {
   const mod = load();
   if (!mod) return { status: 'unavailable' };
 
-  const permission = await mod.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) return { status: 'permission-denied' };
+  try {
+    const permission = await mod.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return { status: 'permission-denied' };
 
-  const result = await mod.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    allowsEditing: true,
-    aspect: [1, 1],
-    quality: 0.8,
-  });
-  if (result.canceled) return { status: 'cancelled' };
+    const result = await mod.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled) return { status: 'cancelled' };
 
-  const asset = result.assets[0];
-  const mimeType = asset.mimeType;
-  if (!mimeType || !ALLOWED_MIME_TYPES.has(mimeType)) return { status: 'unsupported-type' };
+    const asset = result.assets[0];
+    const mimeType = asset.mimeType;
+    if (!mimeType || !ALLOWED_MIME_TYPES.has(mimeType)) return { status: 'unsupported-type' };
 
-  return { status: 'picked', image: { uri: asset.uri, mimeType: mimeType as PickedImage['mimeType'] } };
+    return { status: 'picked', image: { uri: asset.uri, mimeType: mimeType as PickedImage['mimeType'] } };
+  } catch {
+    // Expo's newer native modules throw lazily, on the first actual native
+    // call, not on require() — so `load()` alone can't catch a binary that
+    // has the JS package but not the compiled native module linked in yet.
+    return { status: 'unavailable' };
+  }
 }

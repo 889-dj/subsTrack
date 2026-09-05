@@ -38,30 +38,37 @@ export async function registerForPushNotifications(): Promise<RegisterPushTokenO
   const mod = load();
   if (!mod) return { status: 'unavailable' };
 
-  const existing = await mod.getPermissionsAsync();
-  let status = existing.status;
-  if (status !== 'granted') {
-    const requested = await mod.requestPermissionsAsync();
-    status = requested.status;
-  }
-  if (status !== 'granted') return { status: 'permission-denied' };
-
-  if (Platform.OS === 'android') {
-    await mod.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: mod.AndroidImportance.DEFAULT,
-    });
-  }
-
-  const projectId = Constants.expoConfig?.extra?.eas?.projectId;
   try {
-    // Throws on a simulator/emulator — there's no APNs/FCM device to
-    // register a real push token with, so that failure is expected there.
-    const { data: token } = await mod.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined,
-    );
-    return { status: 'registered', token };
+    const existing = await mod.getPermissionsAsync();
+    let status = existing.status;
+    if (status !== 'granted') {
+      const requested = await mod.requestPermissionsAsync();
+      status = requested.status;
+    }
+    if (status !== 'granted') return { status: 'permission-denied' };
+
+    if (Platform.OS === 'android') {
+      await mod.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: mod.AndroidImportance.DEFAULT,
+      });
+    }
+
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    try {
+      // Throws on a simulator/emulator — there's no APNs/FCM device to
+      // register a real push token with, so that failure is expected there.
+      const { data: token } = await mod.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined,
+      );
+      return { status: 'registered', token };
+    } catch {
+      return { status: 'unsupported-device' };
+    }
   } catch {
-    return { status: 'unsupported-device' };
+    // Expo's newer native modules throw lazily, on the first actual native
+    // call, not on require() — so `load()` alone can't catch a binary that
+    // has the JS package but not the compiled native module linked in yet.
+    return { status: 'unavailable' };
   }
 }
