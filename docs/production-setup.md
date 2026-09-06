@@ -10,7 +10,7 @@ Create a Clerk application with email/password authentication and email-code
 verification enabled. Register the native app identifiers:
 
 - iOS bundle id: `com.devjain.subsTrack`
-- Android package: `com.devjain.subsTrack`
+- Android package: `com.substracks.app`
 
 Configure a Clerk webhook at:
 
