@@ -2,10 +2,19 @@
  * expo-notifications ships native code, so requiring it throws on a
  * dev-client binary built before the package was added — same situation as
  * expo-image-picker (see src/lib/imagePicker.ts) and react-native-purchases
- * (see src/lib/purchases.ts), same fix: load lazily behind a try/catch.
+ * (see src/lib/purchases.ts). The usual fix (try/catch around require()) is
+ * NOT enough here: expo-notifications' own sub-modules call the *throwing*
+ * expo-modules-core `requireNativeModule('ExpoPushTokenManager')` at their
+ * top level, and on this binary that throw happens in a way a plain JS
+ * try/catch around `require('expo-notifications')` does not catch (it still
+ * crashes the app under React Native's New Architecture). The real fix:
+ * probe with expo-modules-core's own *non-throwing* `requireOptionalNativeModule`
+ * for that exact native module first, and never call require('expo-notifications')
+ * at all — not even inside a try/catch — unless that probe succeeds.
  */
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 
 type NotificationsNamespace = typeof import('expo-notifications');
 
@@ -14,6 +23,12 @@ let cached: NotificationsNamespace | null | undefined;
 function load(): NotificationsNamespace | null {
   if (cached !== undefined) return cached;
   try {
+    // Non-throwing: returns null if the native side isn't linked into this
+    // binary, without ever triggering expo-notifications' own throwing path.
+    if (!requireOptionalNativeModule('ExpoPushTokenManager')) {
+      cached = null;
+      return cached;
+    }
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     cached = require('expo-notifications') as NotificationsNamespace;
   } catch {
