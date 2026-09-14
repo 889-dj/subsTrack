@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
-import { Edge, SafeAreaView } from 'react-native-safe-area-context';
+import { Edge, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/hooks/useTheme';
 import { gutter, type Palette } from '@/src/theme';
 
@@ -28,8 +28,19 @@ export function Screen({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const inner: ViewStyle | undefined = padded ? styles.padded : undefined;
 
+  // `<SafeAreaView>` reports stale/zero insets inside `fullScreenModal`
+  // native-stack screens on iOS (e.g. add.tsx) — the hook doesn't have that
+  // bug, matching the pattern already used in paywall.tsx.
+  const insets = useSafeAreaInsets();
+  const safeStyle: ViewStyle = {
+    paddingTop: edges.includes('top') ? insets.top : 0,
+    paddingBottom: edges.includes('bottom') ? insets.bottom : 0,
+    paddingLeft: edges.includes('left') ? insets.left : 0,
+    paddingRight: edges.includes('right') ? insets.right : 0,
+  };
+
   return (
-    <SafeAreaView edges={edges} style={[styles.safe, style]}>
+    <View style={[styles.safe, safeStyle, style]}>
       {scroll ? (
         <ScrollView
           style={styles.flex}
@@ -42,7 +53,7 @@ export function Screen({
       ) : (
         <View style={[styles.flex, inner, contentContainerStyle]}>{children}</View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

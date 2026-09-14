@@ -103,8 +103,9 @@ export default function OverviewScreen() {
     >
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>{greeting()}</Text>
+          <Text style={styles.eyebrow}>AT A GLANCE</Text>
           <Text style={styles.overviewTitle}>Overview</Text>
+          <Text style={styles.headerCaption}>{greeting()} — here's where things stand.</Text>
         </View>
         <Pressable
           hitSlop={10}
@@ -229,6 +230,7 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       letterSpacing: -0.6,
       color: colors.ink,
     },
+    headerCaption: { ...t.caption, marginTop: 3 },
     accountButton: {
       minHeight: 44,
       flexDirection: 'row',

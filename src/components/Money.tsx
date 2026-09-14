@@ -78,7 +78,10 @@ export function Money({
       style={[base, { color }, style]}
       accessibilityLabel={`${currencySymbol(currency)}${Math.round(value)}`}
     >
-      <Text style={{ fontSize: symbolSize, color: symbolColor }}>{currencySymbol(currency)}</Text>
+      <Text style={{ fontSize: symbolSize, color: symbolColor }}>
+        {currencySymbol(currency)}
+        {' '}
+      </Text>
       {Math.round(shown).toLocaleString('en-IN')}
     </Text>
   );

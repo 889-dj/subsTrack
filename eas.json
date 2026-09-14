@@ -8,7 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "autoIncrement": true,
-      "environment": "development"
+      "environment": "development",
+      "channel": "development"
     },
     "development-simulator": {
       "developmentClient": true,
@@ -16,15 +17,18 @@
       "ios": {
         "simulator": true
       },
-      "environment": "development"
+      "environment": "development",
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
-      "environment": "preview"
+      "environment": "preview",
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
-      "environment": "production"
+      "environment": "production",
+      "channel": "production"
     }
   },
   "submit": {

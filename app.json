@@ -7,6 +7,12 @@
     "icon": "./assets/icon.png",
     "scheme": "subtrack",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/60ad1b5b-3755-44e6-b57d-43b5957fdc13"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.devjain.subsTrack",

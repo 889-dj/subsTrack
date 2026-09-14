@@ -67,7 +67,10 @@ export function AmountText({
       numberOfLines={numberOfLines}
     >
       {approx ? <Text style={symbol}>≈</Text> : null}
-      <Text style={symbol}>{currencySymbol(currency)}</Text>
+      <Text style={symbol}>
+        {currencySymbol(currency)}
+        {' '}
+      </Text>
       {digits}
     </Text>
   );
