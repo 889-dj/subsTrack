@@ -20,6 +20,7 @@ import {
 } from '@/src/hooks/useSubscriptions';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useUndoableActions } from '@/src/hooks/useUndoableActions';
+import { Timeline } from 'panelui-native';
 import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
 import { formatMoney } from '@/src/utils/money';
 import { daysUntil, longDate } from '@/src/utils/subscriptions';
@@ -150,16 +151,23 @@ export default function DetailScreen() {
         </View>
 
         {occurrences && occurrences.length > 0 ? (
-          <View style={styles.details}>
+          <View style={styles.timeline}>
             <SectionHeader label="Next renewals" />
-            {occurrences.slice(0, 5).map((occurrence, index, list) => (
-              <KeyValueRow
-                key={occurrence.date}
-                label={formatDate(occurrence.date)}
-                value={formatMoney(Number(occurrence.amount), occurrence.currency)}
-                last={index === list.length - 1}
-              />
-            ))}
+            <Timeline variant="dot" value={0}>
+              {occurrences.slice(0, 5).map((occurrence, index) => (
+                <Timeline.Item key={occurrence.date} step={index}>
+                  <Timeline.Indicator />
+                  <Timeline.Content>
+                    <Timeline.Header>
+                      <Timeline.Title className="flex-1">{formatDate(occurrence.date)}</Timeline.Title>
+                      <Timeline.Trailing>
+                        {formatMoney(Number(occurrence.amount), occurrence.currency)}
+                      </Timeline.Trailing>
+                    </Timeline.Header>
+                  </Timeline.Content>
+                </Timeline.Item>
+              ))}
+            </Timeline>
           </View>
         ) : null}
 
@@ -228,6 +236,9 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       justifyContent: 'center',
     },
     details: {
+      marginTop: space.md,
+    },
+    timeline: {
       marginTop: space.md,
     },
     countdown: {

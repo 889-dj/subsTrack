@@ -41,6 +41,12 @@ export type RegisterPushTokenOutcome =
   | { status: 'registered'; token: string }
   | { status: 'permission-denied' }
   | { status: 'unsupported-device' }
+  /**
+   * The device is real and permission was granted, but Expo could not issue a
+   * token — typically missing APNs/FCM credentials, a build without the push
+   * entitlement, or no network. `message` is Expo's own error text.
+   */
+  | { status: 'token-error'; message: string }
   /** Native module missing from this binary (old dev client or Expo Go). */
   | { status: 'unavailable' };
 
@@ -71,14 +77,19 @@ export async function registerForPushNotifications(): Promise<RegisterPushTokenO
 
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
     try {
-      // Throws on a simulator/emulator — there's no APNs/FCM device to
-      // register a real push token with, so that failure is expected there.
+      // Throws on a simulator/emulator (expected) and on a real device when the
+      // push credentials or entitlement are missing (actionable).
       const { data: token } = await mod.getExpoPushTokenAsync(
         projectId ? { projectId } : undefined,
       );
       return { status: 'registered', token };
-    } catch {
-      return { status: 'unsupported-device' };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      // Only an actual simulator/emulator is "unsupported"; everything else is a
+      // real failure the user (or we) can act on, so don't hide it behind that label.
+      if (/simulator|emulator/i.test(message)) return { status: 'unsupported-device' };
+      console.warn('[push] getExpoPushTokenAsync failed:', message);
+      return { status: 'token-error', message };
     }
   } catch {
     // Expo's newer native modules throw lazily, on the first actual native

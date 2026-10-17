@@ -124,6 +124,8 @@ export interface TrendPoint {
   month: string; // "YYYY-MM"
   scheduledAmount: string;
   renewalCount: number;
+  /** Where the month's amount comes from, largest first; sums to `scheduledAmount`. Absent on older backends. */
+  byCategory?: { category: string; amount: string }[];
 }
 
 export interface CurrencyTrend {

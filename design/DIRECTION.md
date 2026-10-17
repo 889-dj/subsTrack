@@ -51,3 +51,11 @@ Research this round (per-source status): Dribbble search + top shot — loaded i
 | Rocket Money (Time review): "crowded at first" | Overview kept to hero + coming up + forecast |
 
 Not done: haptics (Expo docs: Light on swipe threshold, Medium on commit, Success after save) — `expo-haptics` is not installed and needs a native rebuild.
+
+## Pass 4 (panelui components)
+- **Forecast**: `BarChart` is now `stacked`, one series per category (top 4 + "Other"), with a legend. Needs the backend's new additive `byCategory` on each spend-trend point (`subsTrack-backend/src/analytics.ts`, covered by a new test); the mock mirrors it and the app tolerates its absence.
+- **Overview hero**: compact `LineChart` sparkline of the next months inside the gradient hero (white on gradient — `Kpi` itself can't be used there because its text/surface colours come from panelui's theme, not the hero's).
+- **Insights run-rate**: panelui `Kpi` (value, trend badge with `goodDirection="down"` so a rise reads as bad, sparkline), drawn with `surface={false}` inside the app's own card so it matches the other cards.
+- **Detail**: `Timeline` for the next renewals, soonest charge active.
+- **Toast + Swipe**: now panelui's. `useToast()` keeps its old shape and wraps `toast.show` at the top edge (the bottom belongs to the tab bar); panelui's toast has no expiry callback so undo-delete keeps its own timer. `SwipeableRow` wraps `Swipe` + `Swipe.Group`.
+- Not used: `Calendar` (a picker; ours shows logos/dots), `RingChart`/`Meter` (our `RenewalRing` fits), `WaterfallChart` (needs history the backend does not keep), budget rings (new feature).

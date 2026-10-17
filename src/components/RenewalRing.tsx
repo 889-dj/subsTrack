@@ -49,7 +49,7 @@ export function RenewalRing({ days, cycleDays, size = 88, paused = false }: Rene
   const arc = soon ? colors.warning : colors.indigo;
 
   return (
-    <View style={{ width: size, height: size }} accessibilityElementsHidden>
+    <View style={{ width: size, height: size }} aria-hidden>
       <Svg width={size} height={size} style={styles.svg}>
         <Circle
           cx={size / 2}

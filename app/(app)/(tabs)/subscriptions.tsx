@@ -9,7 +9,7 @@ import { FilterChips } from '@/src/components/FilterChips';
 import { SearchBar } from '@/src/components/SearchBar';
 import { SkeletonList } from '@/src/components/SkeletonRow';
 import { SubscriptionCard } from '@/src/components/SubscriptionCard';
-import { SwipeableRow } from '@/src/components/SwipeableRow';
+import { SwipeableGroup, SwipeableRow } from '@/src/components/SwipeableRow';
 import { useUndoableActions } from '@/src/hooks/useUndoableActions';
 import { useOverview, useSpendHeadline } from '@/src/hooks/useAnalytics';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
@@ -137,7 +137,7 @@ export default function SubscriptionsScreen() {
             }
           />
         ) : (
-          <View style={styles.list}>
+          <SwipeableGroup style={styles.list}>
             {sections.map((section, sectionIndex) => (
               <View key={section.key}>
                 <View style={styles.bucketHeader}>
@@ -177,7 +177,7 @@ export default function SubscriptionsScreen() {
                 })}
               </View>
             ))}
-          </View>
+          </SwipeableGroup>
         )}
       </Animated.ScrollView>
     </View>

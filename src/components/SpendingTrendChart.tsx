@@ -21,6 +21,9 @@ interface SpendingTrendChartProps {
 
 type ForecastDatum = RenewalForecastPoint & BarChartDatum;
 
+/** Categories drawn individually; everything smaller is folded into "Other". */
+const MAX_SERIES = 4;
+
 const RANGE_OPTIONS: { value: ForecastRange; label: string }[] = [
   { value: 3, label: 'Next 3 months' },
   { value: 6, label: 'Next 6 months' },
@@ -37,7 +40,36 @@ export function SpendingTrendChart({
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
   const [active, setActive] = useState<ForecastDatum | null>(null);
-  const data = points as ForecastDatum[];
+
+  // Which categories get their own colour: the biggest across the visible months.
+  const accents = [colors.indigo, colors.cyan, colors.pink, colors.warning, colors.saved];
+  const series = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const point of points) {
+      for (const item of point.byCategory) {
+        totals.set(item.category, (totals.get(item.category) ?? 0) + item.amount);
+      }
+    }
+    const ranked = [...totals.entries()].sort(([, a], [, b]) => b - a).map(([name]) => name);
+    const named = ranked.filter((name) => name !== 'Other').slice(0, MAX_SERIES);
+    const hasRest = ranked.some((name) => !named.includes(name));
+    return hasRest ? [...named, 'Other'] : named;
+  }, [points]);
+
+  // One column per series so the chart can stack them; the folded categories sum into "Other".
+  const data = useMemo(
+    () =>
+      points.map((point) => {
+        const row: Record<string, number | string | unknown> = { ...point };
+        for (const name of series) row[name] = 0;
+        for (const item of point.byCategory) {
+          const key = series.includes(item.category) ? item.category : 'Other';
+          row[key] = Number(row[key]) + item.amount;
+        }
+        return row;
+      }) as ForecastDatum[],
+    [points, series],
+  );
   const periodTotal = data.reduce((sum, point) => sum + point.amount, 0);
   const renewalCount = data.reduce((sum, point) => sum + point.count, 0);
   const selectedRange = RANGE_OPTIONS.find((option) => option.value === months) ?? RANGE_OPTIONS[1];
@@ -107,6 +139,7 @@ export function SpendingTrendChart({
       <BarChart
         data={data}
         xDataKey="label"
+        stacked
         aspectRatio={1.72}
         barGap={months === 12 ? 0.32 : 0.42}
         animationDuration={520}
@@ -119,7 +152,14 @@ export function SpendingTrendChart({
         }
       >
         <BarChart.Grid rows={3} color={colors.hairline} dashArray="3,6" />
-        <BarChart.Bar dataKey="amount" color={colors.indigo} cornerRadius={6} />
+        {series.map((name, index) => (
+          <BarChart.Bar
+            key={name}
+            dataKey={name}
+            color={accents[index % accents.length]}
+            cornerRadius={index === series.length - 1 ? 6 : 2}
+          />
+        ))}
         <BarChart.XAxis ticks={months > 6 ? 6 : months} />
         <BarChart.YAxis ticks={3} format={formatAxis} />
         <BarChart.Tooltip
@@ -128,6 +168,17 @@ export function SpendingTrendChart({
         />
       </BarChart>
 
+      <View style={styles.legend}>
+        {series.map((name, index) => (
+          <View key={name} style={styles.legendItem}>
+            <View style={[styles.legendSwatch, { backgroundColor: accents[index % accents.length] }]} />
+            <Text style={styles.legendLabel} numberOfLines={1}>
+              {name}
+            </Text>
+          </View>
+        ))}
+      </View>
+
       <Text style={styles.footnote}>Drag across the bars to inspect a month.</Text>
     </View>
   );
@@ -135,6 +186,10 @@ export function SpendingTrendChart({
 
 const createStyles = (colors: Palette, t: TextStyles) =>
   StyleSheet.create({
+    legend: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md, marginTop: space.md },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    legendSwatch: { width: 9, height: 9, borderRadius: 3 },
+    legendLabel: { ...t.caption, fontSize: 12 },
     card: {
       backgroundColor: colors.surface,
       borderRadius: radius.card,

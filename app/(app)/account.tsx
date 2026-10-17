@@ -140,6 +140,12 @@ export default function AccountScreen() {
           'Allow notifications in Settings to get renewal reminders.',
         );
         return;
+      case 'token-error':
+        Alert.alert(
+          "Couldn't enable reminders",
+          `Your device allowed notifications, but a push token couldn't be issued.\n\n${outcome.message}`,
+        );
+        return;
       case 'registered':
         registerPushTokenMutation.mutate(outcome.token, {
           onError: () =>

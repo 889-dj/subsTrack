@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Kpi } from 'panelui-native';
 import { TAB_BAR_CLEARANCE } from '@/src/components/BottomNav';
 import { CategoryBreakdown } from '@/src/components/CategoryBreakdown';
 import { EmptyState } from '@/src/components/EmptyState';
@@ -10,7 +11,7 @@ import { InsightCard } from '@/src/components/InsightCard';
 import { Money } from '@/src/components/Money';
 import { SectionHeader } from '@/src/components/SectionHeader';
 import { SkeletonList } from '@/src/components/SkeletonRow';
-import { useOverview, useSpendHeadline } from '@/src/hooks/useAnalytics';
+import { useOverview, useSpendHeadline, useSpendTrend } from '@/src/hooks/useAnalytics';
 import { useInsights, useRefreshInsights } from '@/src/hooks/useInsights';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
@@ -39,6 +40,16 @@ export default function InsightsScreen() {
   );
 
   const { primary, currency, monthly, yearly, note: otherCurrenciesNote } = useSpendHeadline(overview);
+  const { data: trend } = useSpendTrend(6, primary?.currency);
+  const sparkData = useMemo(
+    () =>
+      (trend?.series.find((item) => item.currency === currency)?.points ?? []).map((point) => ({
+        month: point.month,
+        amount: Number(point.scheduledAmount),
+      })),
+    [trend, currency],
+  );
+  const monthChange = primary?.changePercent != null ? Number(primary.changePercent) : null;
   const byCategory = useMemo(
     () =>
       (primary?.byCategory ?? []).map((c) => ({
@@ -141,11 +152,20 @@ export default function InsightsScreen() {
       ) : (
         <>
           <Animated.View entering={FadeInDown.duration(320)} style={styles.heroCard}>
-            <Text style={styles.heroKicker}>ANNUAL RUN RATE</Text>
-            <View style={styles.heroAmountRow}>
-              <Money value={yearly} currency={currency} size="total" />
-              <Text style={styles.heroPeriod}>/year</Text>
-            </View>
+            {/* Spend going up is the bad news, so the trend colours follow goodDirection="down".
+                surface={false}: the card is drawn here so it matches the app's other cards. */}
+            <Kpi goodDirection="down" surface={false}>
+              <Kpi.Header>
+                <Kpi.Title>Annual run rate</Kpi.Title>
+              </Kpi.Header>
+              <Kpi.Content>
+                <Kpi.Value>{formatCompactMoney(yearly, currency)}</Kpi.Value>
+                {monthChange != null ? (
+                  <Kpi.Trend value={monthChange} variant="badge" caption="vs last month" threshold={0.05} />
+                ) : null}
+              </Kpi.Content>
+              {sparkData.length > 1 ? <Kpi.Chart data={sparkData} dataKey="amount" height={76} /> : null}
+            </Kpi>
             <Text style={styles.heroSub}>
               {formatCompactMoney(monthly, currency)} each month across {scopedSubs.length}{' '}
               {currency} subscription{scopedSubs.length === 1 ? '' : 's'}.

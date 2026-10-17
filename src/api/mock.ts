@@ -438,14 +438,20 @@ function installMockApi(): void {
         points: Array.from({ length: months }, (_, i) => {
           const d = new Date();
           d.setMonth(d.getMonth() + i);
-          const amount = items.reduce((sum, s) => {
-            if (s.billingCycle === 'monthly') return sum + s.cost;
-            return sum + (i % 12 === 0 ? s.cost : 0);
-          }, 0);
+          const charged = items.filter((s) => s.billingCycle === 'monthly' || i % 12 === 0);
+          const amount = charged.reduce((sum, s) => sum + s.cost, 0);
+          const categories = new Map<string, number>();
+          for (const s of charged) {
+            const category = s.category ?? 'Other';
+            categories.set(category, (categories.get(category) ?? 0) + s.cost);
+          }
           return {
             month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
             scheduledAmount: amount.toFixed(2),
             renewalCount: items.length,
+            byCategory: [...categories.entries()]
+              .sort(([, a], [, b]) => b - a)
+              .map(([category, value]) => ({ category, amount: value.toFixed(2) })),
           };
         }),
       }));

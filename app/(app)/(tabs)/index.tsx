@@ -78,6 +78,11 @@ export default function OverviewScreen() {
         label: new Date(year, month - 1, 1).toLocaleDateString('en-IN', { month: 'short' }),
         amount: Number(point.scheduledAmount),
         count: point.renewalCount,
+        // Older backends don't send the split yet — fall back to an empty list, not a crash.
+        byCategory: (point.byCategory ?? []).map((item) => ({
+          category: item.category,
+          amount: Number(item.amount),
+        })),
       };
     });
   }, [trend, currency]);
@@ -144,6 +149,7 @@ export default function OverviewScreen() {
             scopeNote={scopeNote}
             dueAmount={due.amount}
             dueCount={due.count}
+            trend={forecastPoints.map((point) => ({ label: point.label, amount: point.amount }))}
           />
           </Animated.View>
 

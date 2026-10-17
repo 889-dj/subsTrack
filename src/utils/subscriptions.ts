@@ -19,6 +19,8 @@ export interface RenewalForecastPoint {
   label: string;
   amount: number;
   count: number;
+  /** Server-computed split of `amount` by category, largest first. */
+  byCategory: { category: string; amount: number }[];
 }
 
 

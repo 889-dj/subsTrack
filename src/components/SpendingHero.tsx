@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { LineChart } from 'panelui-native';
 import { Money } from '@/src/components/Money';
 import { formatCompactMoney } from '@/src/utils/money';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -17,6 +18,8 @@ interface SpendingHeroProps {
   /** Total charging in the next 7 days, in `currency`. */
   dueAmount?: number;
   dueCount?: number;
+  /** Scheduled amount per upcoming month — drawn as a small shape under the number. */
+  trend?: { label: string; amount: number }[];
 }
 
 /**
@@ -33,6 +36,7 @@ export function SpendingHero({
   deltaPercent,
   dueAmount = 0,
   dueCount = 0,
+  trend,
 }: SpendingHeroProps) {
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
@@ -72,6 +76,15 @@ export function SpendingHero({
       <Text style={styles.subline} numberOfLines={1} ellipsizeMode="clip">
         {formatCompactMoney(Math.round(yearly), currency)} a year · {activeCount} active
       </Text>
+
+      {trend && trend.length > 1 ? (
+        <View style={styles.spark} aria-hidden>
+          <LineChart data={trend} compact aspectRatio={6}>
+            <LineChart.Area dataKey="amount" color={colors.heroInk} />
+            <LineChart.Line dataKey="amount" color={colors.heroInk} strokeWidth={2} />
+          </LineChart>
+        </View>
+      ) : null}
 
       <View style={styles.duePanel}>
         <View style={styles.dueDot} />
@@ -143,11 +156,12 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       lineHeight: 18,
       color: colors.heroMuted,
     },
+    spark: { marginTop: space.lg, height: 44, opacity: 0.9 },
     duePanel: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: space.md,
-      marginTop: space.xl,
+      marginTop: space.lg,
       paddingHorizontal: space.lg,
       paddingVertical: space.md,
       borderRadius: radius.card,
