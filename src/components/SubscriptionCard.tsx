@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { PressableScale } from '@/src/components/PressableScale';
 import { AmountText } from '@/src/components/AmountText';
 import { SubscriptionIcon } from '@/src/components/SubscriptionIcon';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font, radius, space, type Palette, type TextStyles } from '@/src/theme';
 import type { Subscription } from '@/src/types';
-import { shortDate } from '@/src/utils/subscriptions';
+import { daysUntil, relativeDateLabel, shortDate } from '@/src/utils/subscriptions';
 
 interface SubscriptionCardProps {
   subscription: Subscription;
@@ -21,15 +22,15 @@ export function SubscriptionCard({ subscription, onPress, variant = 'row' }: Sub
 
   const cycleLabel = subscription.billingCycle === 'yearly' ? 'Yearly' : 'Monthly';
   const subtitle = `${cycleLabel} · ${subscription.category ?? 'Other'}`;
+  const days = daysUntil(subscription.nextRenewalDate);
+  const isPaused = subscription.status === 'paused';
+  const dueSoon = !isPaused && days >= 0 && days <= 3;
+  const dateLabel = isPaused ? 'Paused' : days >= 0 && days < 7 ? relativeDateLabel(subscription.nextRenewalDate) : shortDate(subscription.nextRenewalDate);
 
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.card,
-        variant === 'card' && styles.cardBoxed,
-        pressed && styles.pressed,
-      ]}
+      style={[styles.card, variant === 'card' && styles.cardBoxed]}
       accessibilityRole="button"
       accessibilityLabel={`${subscription.name}, ${subscription.cost} ${subscription.currency}, renews ${shortDate(subscription.nextRenewalDate)}`}
     >
@@ -44,9 +45,11 @@ export function SubscriptionCard({ subscription, onPress, variant = 'row' }: Sub
       </View>
       <View style={styles.right}>
         <AmountText value={subscription.cost} currency={subscription.currency} tone="ink" />
-        <Text style={styles.date}>{shortDate(subscription.nextRenewalDate)}</Text>
+        <View style={[styles.dateChip, dueSoon && styles.dateChipSoon]}>
+          <Text style={[styles.date, dueSoon && styles.dateSoon]}>{dateLabel}</Text>
+        </View>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -70,9 +73,6 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       paddingVertical: space.lg,
       marginBottom: space.sm,
     },
-    pressed: {
-      opacity: 0.62,
-    },
     copy: {
       flex: 1,
       gap: 2,
@@ -88,8 +88,20 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       alignItems: 'flex-end',
       gap: 2,
     },
+    dateChip: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: radius.chip,
+    },
+    dateChipSoon: {
+      backgroundColor: `${colors.warning}24`,
+    },
     date: {
       ...t.caption,
-      fontSize: 11.5,
+      fontSize: 12,
+    },
+    dateSoon: {
+      color: colors.warning,
+      fontFamily: font.sansMed,
     },
   });

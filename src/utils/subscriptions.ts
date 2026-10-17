@@ -61,6 +61,15 @@ export function upcoming(subs: Subscription[], days = 30): Subscription[] {
 }
 
 /** "Today" / "Tomorrow" / "Aug 18" style relative label. */
+/** Whole calendar days from today to the given ISO date (negative when past). */
+export function daysUntil(iso: string): number {
+  const target = new Date(iso);
+  target.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / DAY);
+}
+
 export function relativeDateLabel(iso: string): string {
   const target = new Date(iso);
   target.setHours(0, 0, 0, 0);

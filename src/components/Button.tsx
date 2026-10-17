@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextStyle, ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextStyle, ViewStyle } from 'react-native';
+import { PressableScale } from '@/src/components/PressableScale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font, gradients, radius, space, type Palette } from '@/src/theme';
@@ -35,15 +36,12 @@ export function Button({
 
   if (variant === 'primary' && colors.isDark) {
     return (
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
         onPress={onPress}
         disabled={isDisabled}
-        style={({ pressed }) => [
-          isDisabled && styles.disabled,
-          pressed && !isDisabled && styles.pressed,
-          style,
-        ]}
+        pressedScale={0.98}
+        style={[isDisabled && styles.disabled, style]}
       >
         <LinearGradient
           colors={gradients.primary}
@@ -57,29 +55,24 @@ export function Button({
             <Text style={[styles.label, textVariantStyles.primary]}>{label}</Text>
           )}
         </LinearGradient>
-      </Pressable>
+      </PressableScale>
     );
   }
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       onPress={onPress}
       disabled={isDisabled}
-      style={({ pressed }) => [
-        styles.base,
-        variantStyles[variant],
-        isDisabled && styles.disabled,
-        pressed && !isDisabled && styles.pressed,
-        style,
-      ]}
+      pressedScale={0.98}
+      style={[styles.base, variantStyles[variant], isDisabled && styles.disabled, style]}
     >
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? colors.white : colors.indigo} />
       ) : (
         <Text style={[styles.label, textVariantStyles[variant]]}>{label}</Text>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -107,9 +100,6 @@ const createStyles = (colors: Palette) => {
     },
     disabled: {
       opacity: 0.4,
-    },
-    pressed: {
-      opacity: 0.8,
     },
   });
 

@@ -17,7 +17,9 @@ import { PickerField } from '@/src/components/PickerField';
 import { Screen } from '@/src/components/Screen';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { TextField } from '@/src/components/TextField';
+import { POPULAR_SERVICES, type PopularService } from '@/src/data/popularServices';
 import { CATEGORIES, CURRENCIES, PAYMENT_APPS } from '@/src/types';
+import { daysUntil } from '@/src/utils/subscriptions';
 import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
 import {
   useAddSubscription,
@@ -25,6 +27,7 @@ import {
   useUpdateSubscription,
 } from '@/src/hooks/useSubscriptions';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useToast } from '@/src/hooks/useToast';
 import type { BillingCycle } from '@/src/types';
 
 const CYCLES: { value: BillingCycle; label: string }[] = [
@@ -58,6 +61,7 @@ export default function AddEditScreen() {
   const { data: existing, isLoading: isLoadingExisting } = useSubscription(id);
   const addMutation = useAddSubscription();
   const updateMutation = useUpdateSubscription();
+  const toast = useToast();
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
 
@@ -135,7 +139,22 @@ export default function AddEditScreen() {
     return valid;
   }
 
-  async function handleSave() {
+  function applyQuickPick(service: PopularService) {
+    setName(service.name);
+    setCategory(service.category);
+    setCategoryOther('');
+    setBillingCycle(service.billingCycle);
+    setNameError(null);
+  }
+
+  const renewalHint = (() => {
+    const days = daysUntil(nextRenewalDate.toISOString());
+    if (days < 0) return 'Date has passed — pick the next charge date';
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Tomorrow';
+    return `In ${days} days`;
+  })();
+    async function handleSave() {
     setError(null);
     if (!validate()) return;
 
@@ -159,6 +178,7 @@ export default function AddEditScreen() {
       } else {
         await addMutation.mutateAsync(input);
       }
+      toast.show({ message: isEdit ? `${input.name} updated` : `${input.name} added` });
       if (router.canGoBack()) router.back();
       else router.replace('/');
     } catch (e: any) {
@@ -186,10 +206,43 @@ export default function AddEditScreen() {
               caption={isEdit ? undefined : 'Add the billing details and next renewal.'}
             />
 
+            {!isEdit ? (
+              <View style={styles.quickBlock}>
+                <Text style={t.label}>Popular</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={styles.quickRow}
+                >
+                  {POPULAR_SERVICES.map((service) => {
+                    const selected = name === service.name;
+                    return (
+                      <Pressable
+                        key={service.name}
+                        onPress={() => applyQuickPick(service)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Use ${service.name}`}
+                        accessibilityState={{ selected }}
+                        style={[styles.quickChip, selected && styles.categoryChipActive]}
+                      >
+                        <Text style={[styles.categoryText, selected && styles.categoryTextActive]}>
+                          {service.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            ) : null}
+
             <TextField
               label="Name"
               value={name}
-              onChangeText={setName}
+              onChangeText={(value) => {
+                setName(value);
+                if (nameError) setNameError(null);
+              }}
               placeholder="Netflix"
               autoFocus={!isEdit}
               error={nameError ?? undefined}
@@ -200,7 +253,10 @@ export default function AddEditScreen() {
                 <TextField
                   label="Amount"
                   value={cost}
-                  onChangeText={setCost}
+                  onChangeText={(value) => {
+                    setCost(value.replace(/[^0-9.]/g, ''));
+                    if (costError) setCostError(null);
+                  }}
                   placeholder="499"
                   keyboardType="decimal-pad"
                   numeric
@@ -257,6 +313,7 @@ export default function AddEditScreen() {
                   year: 'numeric',
                 })}
               </Text>
+              <Text style={styles.dateHint}>{renewalHint}</Text>
             </Pressable>
             {showDatePicker && (
               <DateTimePicker
@@ -351,6 +408,12 @@ export default function AddEditScreen() {
               onPress={handleSave}
               loading={isSaving}
             />
+            <Button
+              label="Cancel"
+              variant="ghost"
+              onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+              style={styles.cancelButton}
+            />
           </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
@@ -409,13 +472,35 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       borderWidth: 1,
       borderColor: colors.hairline,
       backgroundColor: colors.surface,
-      justifyContent: 'center',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       paddingHorizontal: space.lg,
       marginTop: space.sm,
       marginBottom: space.lg,
     },
     dateButtonText: {
       ...t.amount,
+    },
+    dateHint: {
+      ...t.caption,
+    },
+    quickBlock: {
+      marginBottom: space.lg,
+      gap: space.sm,
+    },
+    quickRow: {
+      gap: space.sm,
+      paddingRight: gutter,
+    },
+    quickChip: {
+      minHeight: 40,
+      justifyContent: 'center',
+      paddingHorizontal: space.md,
+      borderRadius: radius.chip,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      backgroundColor: colors.surface,
     },
     categoryGroup: {
       flexDirection: 'row',
@@ -425,8 +510,9 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       marginBottom: space.lg,
     },
     categoryChip: {
+      minHeight: 40,
+      justifyContent: 'center',
       paddingHorizontal: space.md,
-      paddingVertical: 7,
       borderRadius: radius.chip,
       borderWidth: 1,
       borderColor: colors.hairline,
@@ -442,6 +528,9 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     },
     categoryTextActive: {
       color: colors.indigo,
+    },
+    cancelButton: {
+      marginTop: space.sm,
     },
     noteInput: {
       height: 88,

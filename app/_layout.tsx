@@ -6,6 +6,8 @@ import { Slot } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ToastProvider } from '@/src/hooks/useToast';
 import { useFonts, Geist_400Regular, Geist_500Medium, Geist_600SemiBold } from '@expo-google-fonts/geist';
 import { GeistMono_400Regular, GeistMono_500Medium } from '@expo-google-fonts/geist-mono';
 import { PanelUIProvider } from 'panelui-native';
@@ -66,9 +68,11 @@ function AppShell() {
   const { resolvedMode } = useTheme();
   usePushNotifications();
   return (
-    <>
-      <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />
-      <Slot />
-    </>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ToastProvider>
+        <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />
+        <Slot />
+      </ToastProvider>
+    </GestureHandlerRootView>
   );
 }

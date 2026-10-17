@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
+import { PressableScale } from '@/src/components/PressableScale';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font, radius, space, type Palette } from '@/src/theme';
 
@@ -23,19 +24,16 @@ export function FilterChips({ options, value, onChange }: FilterChipsProps) {
       {options.map((opt) => {
         const selected = opt === value;
         return (
-          <Pressable
+          <PressableScale
             key={opt}
             onPress={() => onChange(opt)}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
-            style={({ pressed }) => [
-              styles.chip,
-              selected && styles.chipSelected,
-              pressed && styles.pressed,
-            ]}
+            pressedScale={0.95}
+            style={[styles.chip, selected && styles.chipSelected]}
           >
             <Text style={[styles.text, selected && styles.textSelected]}>{opt}</Text>
-          </Pressable>
+          </PressableScale>
         );
       })}
     </ScrollView>

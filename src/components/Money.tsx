@@ -29,7 +29,7 @@ export function Money({
   currency,
   size = 'total',
   animate = false,
-  duration = 1200,
+  duration = 800,
   tone = 'ink',
   style,
 }: MoneyProps) {

@@ -5,6 +5,7 @@ import { AmountText } from '@/src/components/AmountText';
 import { Button } from '@/src/components/Button';
 import { CategoryChip } from '@/src/components/CategoryChip';
 import { KeyValueRow } from '@/src/components/KeyValueRow';
+import { RenewalRing } from '@/src/components/RenewalRing';
 import { Screen } from '@/src/components/Screen';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { SectionHeader } from '@/src/components/SectionHeader';
@@ -18,11 +19,19 @@ import {
   useSubscription,
 } from '@/src/hooks/useSubscriptions';
 import { useTheme } from '@/src/hooks/useTheme';
-import { gutter, space, type Palette, type TextStyles } from '@/src/theme';
+import { useUndoableActions } from '@/src/hooks/useUndoableActions';
+import { font, gutter, radius, space, type Palette, type TextStyles } from '@/src/theme';
 import { formatMoney } from '@/src/utils/money';
-import { longDate } from '@/src/utils/subscriptions';
+import { daysUntil, longDate } from '@/src/utils/subscriptions';
 
 const formatDate = longDate;
+
+function countdownTitle(days: number): string {
+  if (days < 0) return `${Math.abs(days)} day${days === -1 ? '' : 's'} overdue`;
+  if (days === 0) return 'Renews today';
+  if (days === 1) return 'Renews tomorrow';
+  return `Renews in ${days} days`;
+}
 
 export default function DetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
@@ -33,6 +42,7 @@ export default function DetailScreen() {
   const deleteMutation = useDeleteSubscription();
   const pauseMutation = usePauseSubscription();
   const resumeMutation = useResumeSubscription();
+  const { remove } = useUndoableActions();
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
 
@@ -57,22 +67,12 @@ export default function DetailScreen() {
   }
 
   function handleDelete() {
-    Alert.alert(
-      'Remove from SubsTrack?',
-      `${subscription!.name} will no longer be tracked here. This does not cancel billing with the provider.`,
-      [
-        { text: 'Keep it', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteMutation.mutateAsync(subscription!.id);
-            if (router.canGoBack()) router.back();
-            else router.replace('/');
-          },
-        },
-      ]
-    );
+    // Optimistic remove with an Undo snackbar — no confirm dialog (NN/g: undo
+    // beats confirmation for recoverable changes). The copy still says this
+    // does not cancel billing with the provider.
+    remove(subscription!);
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
   }
 
   return (
@@ -102,20 +102,42 @@ export default function DetailScreen() {
           </View>
         </View>
 
+        <View style={styles.countdown}>
+          <RenewalRing
+            days={daysUntil(subscription.nextRenewalDate)}
+            cycleDays={subscription.billingCycle === 'yearly' ? 365 : 30}
+            paused={subscription.status === 'paused'}
+          />
+          <View style={styles.countdownCopy}>
+            <Text style={styles.countdownLabel}>
+              {subscription.status === 'paused' ? 'PAUSED' : 'NEXT CHARGE'}
+            </Text>
+            <Text style={styles.countdownTitle} numberOfLines={1} ellipsizeMode="clip">
+              {subscription.status === 'paused'
+                ? 'Not in your totals'
+                : countdownTitle(daysUntil(subscription.nextRenewalDate))}
+            </Text>
+            <Text style={styles.countdownDate}>{formatDate(subscription.nextRenewalDate)}</Text>
+            <View style={styles.countdownAmount}>
+              <AmountText
+                value={subscription.cost}
+                currency={subscription.currency}
+                round={false}
+                tone="ink"
+                size={20}
+              />
+              <Text style={styles.countdownCycle}>
+                /{subscription.billingCycle === 'yearly' ? 'year' : 'month'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
         <View style={styles.details}>
-          <KeyValueRow label="Amount">
-            <AmountText
-              value={subscription.cost}
-              currency={subscription.currency}
-              round={false}
-              tone="ink"
-            />
-          </KeyValueRow>
           <KeyValueRow
             label="Billing cycle"
             value={subscription.billingCycle === 'yearly' ? 'Yearly' : 'Monthly'}
           />
-          <KeyValueRow label="Next renewal" value={formatDate(subscription.nextRenewalDate)} />
           {subscription.source ? (
             <KeyValueRow label="Payment method" value={subscription.source} />
           ) : null}
@@ -208,6 +230,23 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     details: {
       marginTop: space.md,
     },
+    countdown: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      gap: space.lg,
+      padding: space.lg,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      backgroundColor: colors.surface,
+    },
+    countdownCopy: { flex: 1, minWidth: 0, gap: 2 },
+    countdownLabel: { ...t.label, color: colors.indigo },
+    countdownTitle: { fontFamily: font.sansSemi, fontSize: 20, lineHeight: 26, color: colors.ink },
+    countdownDate: { ...t.caption },
+    countdownAmount: { flexDirection: 'row', alignItems: 'baseline', gap: 4, marginTop: space.xs },
+    countdownCycle: { ...t.caption },
     actions: {
       marginTop: space.xxl,
       gap: space.md,

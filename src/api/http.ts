@@ -1,7 +1,8 @@
+import { USE_MOCK_API } from '@/src/lib/devBypass';
 import axios from 'axios';
 import { getToken } from '@/src/api/tokenStorage';
 
-const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK_API !== 'false';
+const USE_MOCK = USE_MOCK_API;
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? (USE_MOCK ? 'https://mock.substrack.local/v1' : '');
 
 if (!API_URL) {

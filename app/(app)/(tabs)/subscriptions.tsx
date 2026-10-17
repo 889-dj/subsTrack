@@ -2,19 +2,36 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { TAB_BAR_CLEARANCE } from '@/src/components/BottomNav';
 import { EmptyState } from '@/src/components/EmptyState';
 import { FilterChips } from '@/src/components/FilterChips';
 import { SearchBar } from '@/src/components/SearchBar';
 import { SkeletonList } from '@/src/components/SkeletonRow';
 import { SubscriptionCard } from '@/src/components/SubscriptionCard';
+import { SwipeableRow } from '@/src/components/SwipeableRow';
+import { useUndoableActions } from '@/src/hooks/useUndoableActions';
 import { useOverview, useSpendHeadline } from '@/src/hooks/useAnalytics';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
 import { gutter, space, type Palette, type TextStyles } from '@/src/theme';
 import { formatCompactMoney } from '@/src/utils/money';
+import { daysUntil } from '@/src/utils/subscriptions';
+import type { Subscription } from '@/src/types';
+
+type Bucket = 'Paused' | 'This week' | 'Later this month' | 'Later';
+const BUCKET_ORDER: Bucket[] = ['This week', 'Later this month', 'Later', 'Paused'];
+const ENTER_STAGGER_MS = 40;
+const ENTER_MAX_STAGGERED = 8;
+
+function bucketFor(sub: Subscription): Bucket {
+  if (sub.status === 'paused') return 'Paused';
+  const days = daysUntil(sub.nextRenewalDate);
+  if (days <= 7) return 'This week';
+  if (days <= 31) return 'Later this month';
+  return 'Later';
+}
 
 export default function SubscriptionsScreen() {
   const router = useRouter();
@@ -24,6 +41,7 @@ export default function SubscriptionsScreen() {
   const { data, isLoading, refetch, isRefetching } = useSubscriptions();
   const { data: overview, refetch: refetchOverview } = useOverview();
   const { onScroll } = useTabBarScroll();
+  const { remove, setPaused } = useUndoableActions();
 
   async function handleRefresh() {
     await Promise.all([refetch(), refetchOverview()]);
@@ -51,6 +69,18 @@ export default function SubscriptionsScreen() {
       .filter((s) => s.name.toLowerCase().includes(query.trim().toLowerCase()))
       .sort((a, b) => new Date(a.nextRenewalDate).getTime() - new Date(b.nextRenewalDate).getTime());
   }, [subs, category, query]);
+
+  const sections = useMemo(() => {
+    const byBucket = new Map<Bucket, Subscription[]>();
+    filtered.forEach((sub) => {
+      const key = bucketFor(sub);
+      byBucket.set(key, [...(byBucket.get(key) ?? []), sub]);
+    });
+    return BUCKET_ORDER.filter((key) => byBucket.has(key)).map((key) => ({
+      key,
+      items: byBucket.get(key)!,
+    }));
+  }, [filtered]);
 
   return (
     <View style={styles.screen}>
@@ -108,12 +138,44 @@ export default function SubscriptionsScreen() {
           />
         ) : (
           <View style={styles.list}>
-            {filtered.map((sub) => (
-              <SubscriptionCard
-                key={sub.id}
-                subscription={sub}
-                onPress={() => router.push(`/${sub.id}`)}
-              />
+            {sections.map((section, sectionIndex) => (
+              <View key={section.key}>
+                <View style={styles.bucketHeader}>
+                  <Text style={styles.bucketLabel}>{section.key}</Text>
+                  <Text style={styles.bucketCount}>{section.items.length}</Text>
+                </View>
+                {section.items.map((sub, index) => {
+                  const order = sections
+                    .slice(0, sectionIndex)
+                    .reduce((n, s) => n + s.items.length, 0) + index;
+                  return (
+                    <Animated.View
+                      key={sub.id}
+                      entering={
+                        order < ENTER_MAX_STAGGERED
+                          ? FadeInDown.duration(280).delay(order * ENTER_STAGGER_MS)
+                          : undefined
+                      }
+                    >
+                      <SwipeableRow
+                        actions={[
+                          {
+                            label: sub.status === 'paused' ? 'Resume' : 'Pause',
+                            tone: 'primary',
+                            onPress: () => setPaused(sub, sub.status !== 'paused'),
+                          },
+                          { label: 'Remove', tone: 'danger', onPress: () => remove(sub) },
+                        ]}
+                      >
+                        <SubscriptionCard
+                          subscription={sub}
+                          onPress={() => router.push(`/${sub.id}`)}
+                        />
+                      </SwipeableRow>
+                    </Animated.View>
+                  );
+                })}
+              </View>
             ))}
           </View>
         )}
@@ -163,4 +225,13 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     list: {
       marginTop: space.xs,
     },
+    bucketHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: space.lg,
+      marginBottom: space.xs,
+    },
+    bucketLabel: { ...t.label, color: colors.muted },
+    bucketCount: { ...t.label, color: colors.faint },
   });

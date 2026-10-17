@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { PressableScale } from '@/src/components/PressableScale';
 import { AmountText } from '@/src/components/AmountText';
 import { SubscriptionIcon } from '@/src/components/SubscriptionIcon';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -14,6 +15,8 @@ interface UpcomingPaymentProps {
 }
 
 const CARD_WIDTH = 164;
+/** Horizontal offset between stacked icons — wide enough that each logo stays readable. */
+const STACK_STEP = 26;
 
 /**
  * A single card for one renewal day, sized for a horizontal carousel. When
@@ -33,21 +36,21 @@ export function UpcomingPayment({ subs, onPress }: UpcomingPaymentProps) {
   const dateLabel = relativeDateLabel(primary.nextRenewalDate);
 
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${isGroup ? `${subs.length} subscriptions` : primary.name}, ${dateLabel}`}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={styles.card}
     >
       {isGroup ? (
         <View style={styles.stack}>
           {subs.slice(0, 2).map((s, i) => (
-            <View key={s.id} style={[styles.stackItem, { left: i * 18, zIndex: 2 - i }]}>
+            <View key={s.id} style={[styles.stackItem, { left: i * STACK_STEP, zIndex: 2 - i }]}>
               <SubscriptionIcon name={s.name} logoUrl={s.logoUrl} size={38} />
             </View>
           ))}
           {subs.length > 2 ? (
-            <View style={[styles.stackItem, styles.badge, { left: 36 }]}>
+            <View style={[styles.stackItem, styles.badge, { left: 2 * STACK_STEP }]}>
               <Text style={styles.badgeText}>+{subs.length - 2}</Text>
             </View>
           ) : null}
@@ -70,7 +73,7 @@ export function UpcomingPayment({ subs, onPress }: UpcomingPaymentProps) {
           <AmountText value={total} currency={currency} tone="ink" size={15} />
         )}
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -85,16 +88,16 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       padding: space.lg,
       gap: 4,
     },
-    pressed: {
-      opacity: 0.85,
-    },
     stack: {
-      width: 44 + 18,
+      width: 44 + STACK_STEP,
       height: 44,
       marginBottom: space.xs,
     },
     stackItem: {
       position: 'absolute',
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: colors.surface,
     },
     badge: {
       width: 34,
@@ -119,7 +122,7 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     },
     sublabel: {
       ...t.caption,
-      fontSize: 11.5,
+      fontSize: 12,
     },
     amountRow: {
       marginTop: space.lg,

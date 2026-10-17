@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { PressableScale } from '@/src/components/PressableScale';
 import { AmountText } from '@/src/components/AmountText';
 import { TAB_BAR_CLEARANCE } from '@/src/components/BottomNav';
 import { EmptyState } from '@/src/components/EmptyState';
@@ -180,11 +181,15 @@ export default function CalendarScreen() {
             />
           ) : (
             <View style={styles.upcomingList}>
-              {dayGroups.flatMap((group) =>
-                group.occurrences.map((occ) => (
-                  <Pressable
-                    key={`${occ.subscriptionId}-${occ.date}`}
-                    style={({ pressed }) => [styles.upcomingRow, pressed && styles.dayRowPressed]}
+              {dayGroups.flatMap((group) => group.occurrences).map((occ, index) => (
+                <Animated.View
+                  key={`${occ.subscriptionId}-${occ.date}`}
+                  entering={
+                    index < 8 ? FadeInDown.duration(280).delay(index * 40) : undefined
+                  }
+                >
+                  <PressableScale
+                    style={styles.upcomingRow}
                     onPress={() => router.push(`/${occ.subscriptionId}`)}
                     accessibilityRole="button"
                     accessibilityLabel={`${occ.name}, ${occ.cost} ${occ.currency}, renews ${shortDate(occ.date)}`}
@@ -202,9 +207,9 @@ export default function CalendarScreen() {
                       <AmountText value={Number(occ.cost)} currency={occ.currency} tone="ink" />
                       <Text style={styles.upcomingDate}>{shortDate(occ.date)}</Text>
                     </View>
-                  </Pressable>
-                )),
-              )}
+                  </PressableScale>
+                </Animated.View>
+              ))}
             </View>
           )}
         </>

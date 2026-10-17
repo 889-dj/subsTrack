@@ -1,11 +1,12 @@
 import MockAdapter from 'axios-mock-adapter';
 import { http } from '@/src/api/http';
+import { USE_MOCK_API } from '@/src/lib/devBypass';
 import type { AuthResponse, Subscription, SubscriptionInput, User } from '@/src/types';
 
 // Mirrors the REST contract the real backend will expose. Swapping to production
 // is just `EXPO_PUBLIC_USE_MOCK_API=false` + `EXPO_PUBLIC_API_URL=<real url>` —
 // no changes needed in auth.ts, subscriptions.ts, or any hook/screen.
-const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK_API !== 'false';
+const USE_MOCK = USE_MOCK_API;
 
 interface StoredUser extends User {
   password: string;
@@ -146,6 +147,37 @@ let subscriptions: Subscription[] = [
     status: 'active',
   },
 ];
+
+// Mirrors the backend's logo derivation (name -> domain -> favicon URL) so mock
+// mode shows real logos too. Only the common services; others fall back to initials.
+const MOCK_LOGO_DOMAINS: Record<string, string> = {
+  netflix: 'netflix.com',
+  spotify: 'spotify.com',
+  figma: 'figma.com',
+  'youtube premium': 'youtube.com',
+  youtube: 'youtube.com',
+  notion: 'notion.so',
+  'adobe creative cloud': 'adobe.com',
+  adobe: 'adobe.com',
+  dropbox: 'dropbox.com',
+  chatgpt: 'openai.com',
+  'amazon prime': 'amazon.com',
+  'disney+': 'disneyplus.com',
+  icloud: 'apple.com',
+  'google one': 'google.com',
+};
+
+function mockLogoUrl(name: string): string | undefined {
+  const key = name.trim().toLowerCase();
+  const alias = Object.keys(MOCK_LOGO_DOMAINS)
+    .sort((a, b) => b.length - a.length)
+    .find((candidate) => key.includes(candidate));
+  return alias
+    ? `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${MOCK_LOGO_DOMAINS[alias]}&size=128`
+    : undefined;
+}
+
+subscriptions = subscriptions.map((sub) => ({ ...sub, logoUrl: sub.logoUrl ?? mockLogoUrl(sub.name) }));
 let nextSubId = subscriptions.length + 1;
 let nextUserId = 1;
 
@@ -163,8 +195,24 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+let mockInstalled = false;
+
 export function setupMockApi(): void {
   if (!USE_MOCK) return;
+  installMockApi();
+}
+
+/**
+ * Dev-only: installs the mock adapter on the shared client at runtime, so the
+ * login screen's "Dev login" works even when the app booted against the real API.
+ */
+export function enableMockApi(): void {
+  installMockApi();
+}
+
+function installMockApi(): void {
+  if (mockInstalled) return;
+  mockInstalled = true;
 
   const mock = new MockAdapter(http, { delayResponse: 500 });
 
@@ -279,6 +327,7 @@ export function setupMockApi(): void {
     const input: SubscriptionInput = JSON.parse(config.data);
     const sub: Subscription = {
       ...input,
+      logoUrl: mockLogoUrl(input.name),
       id: String(nextSubId++),
       status: 'active',
       createdAt: nowIso(),

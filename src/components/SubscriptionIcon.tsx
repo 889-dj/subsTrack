@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { hashTile } from '@/src/components/Logo';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -36,6 +36,8 @@ export function SubscriptionIcon({ name, logoUrl, size = 44 }: SubscriptionIconP
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [imageFailed, setImageFailed] = useState(false);
+  // A new URL (rename, refetch) deserves a fresh attempt.
+  useEffect(() => setImageFailed(false), [logoUrl]);
   const initial = (name.trim()[0] ?? '?').toUpperCase();
   const tile = useMemo(() => (colors.isDark ? hashTile(name) : hashLight(name)), [colors, name]);
   const showImage = Boolean(logoUrl) && !imageFailed;

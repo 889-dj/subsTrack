@@ -20,6 +20,8 @@ import * as authApi from '@/src/api/auth';
 import { clearToken, getToken as getStoredToken, setToken } from '@/src/api/tokenStorage';
 import { setAuthTokenProvider } from '@/src/api/http';
 import type { Credentials } from '@/src/api/auth';
+import { enableMockApi } from '@/src/api/mock';
+import { DEV_LOGIN_ENABLED, DEV_USER, USE_MOCK_API } from '@/src/lib/devBypass';
 import type { User } from '@/src/types';
 
 interface AuthContextValue {
@@ -36,6 +38,8 @@ interface AuthContextValue {
   cancelVerification: () => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  /** Dev-only: signs in as a throwaway mock user. Undefined outside the dev bypass. */
+  devLogin?: () => Promise<void>;
 }
 
 export type AuthActionResult = 'authenticated' | 'verification_required';
@@ -43,14 +47,31 @@ type VerificationKind = 'signup' | 'signin';
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function MockAuthProvider({ children }: { children: React.ReactNode }) {
+function MockAuthProvider({
+  children,
+  autoDevLogin = false,
+}: {
+  children: React.ReactNode;
+  /** Sign in the dev user on mount (used when switching over from the real API). */
+  autoDevLogin?: boolean;
+}) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const devLoginRef = React.useRef<() => Promise<void>>(async () => undefined);
 
   useEffect(() => {
     (async () => {
+      if (autoDevLogin) {
+        try {
+          await devLoginRef.current();
+        } catch {
+          // Fall through to the login screen with the mock API active.
+        }
+        setIsLoading(false);
+        return;
+      }
       const token = await getStoredToken();
       // We don't persist the user profile separately; a stored token is enough
       // to consider the session valid until the API rejects it.
@@ -87,6 +108,20 @@ function MockAuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const devLogin = useCallback(async () => {
+    // The mock user store is in memory, so log in if the user already exists
+    // (same session) and otherwise create it.
+    let result;
+    try {
+      result = await authApi.login(DEV_USER);
+    } catch {
+      result = await authApi.register(DEV_USER);
+    }
+    await setToken(result.token);
+    setUser(result.user);
+  }, []);
+  devLoginRef.current = devLogin;
+
   const logout = useCallback(async () => {
     await clearToken();
     setUser(null);
@@ -116,6 +151,7 @@ function MockAuthProvider({ children }: { children: React.ReactNode }) {
         cancelVerification: async () => undefined,
         logout,
         deleteAccount,
+        devLogin: DEV_LOGIN_ENABLED ? devLogin : undefined,
       }}
     >
       {children}
@@ -123,22 +159,38 @@ function MockAuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK_API !== 'false';
+const USE_MOCK = USE_MOCK_API;
 const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  // Dev login flips this on: the real providers unmount and the mock takes over.
+  const [devSession, setDevSession] = useState(false);
+  const startDevSession = useCallback(async () => {
+    enableMockApi();
+    setDevSession(true);
+  }, []);
+
   if (USE_MOCK) return <MockAuthProvider>{children}</MockAuthProvider>;
+  if (devSession) return <MockAuthProvider autoDevLogin>{children}</MockAuthProvider>;
   if (!CLERK_PUBLISHABLE_KEY) {
-    return <UnconfiguredAuthProvider>{children}</UnconfiguredAuthProvider>;
+    return (
+      <UnconfiguredAuthProvider onDevLogin={startDevSession}>{children}</UnconfiguredAuthProvider>
+    );
   }
   return (
     <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
-      <ClerkAuthProvider>{children}</ClerkAuthProvider>
+      <ClerkAuthProvider onDevLogin={startDevSession}>{children}</ClerkAuthProvider>
     </ClerkProvider>
   );
 }
 
-function UnconfiguredAuthProvider({ children }: { children: React.ReactNode }) {
+function UnconfiguredAuthProvider({
+  children,
+  onDevLogin,
+}: {
+  children: React.ReactNode;
+  onDevLogin: () => Promise<void>;
+}) {
   const message = 'Add EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY to use the production API.';
   const reject = async (): Promise<never> => {
     throw new Error(message);
@@ -159,6 +211,7 @@ function UnconfiguredAuthProvider({ children }: { children: React.ReactNode }) {
         cancelVerification: async () => undefined,
         logout: async () => undefined,
         deleteAccount: reject,
+        devLogin: DEV_LOGIN_ENABLED ? onDevLogin : undefined,
       }}
     >
       {children}
@@ -174,7 +227,13 @@ function clerkMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-function ClerkAuthProvider({ children }: { children: React.ReactNode }) {
+function ClerkAuthProvider({
+  children,
+  onDevLogin,
+}: {
+  children: React.ReactNode;
+  onDevLogin: () => Promise<void>;
+}) {
   const { isLoaded, isSignedIn, getToken } = useClerkSession({
     treatPendingAsSignedOut: false,
   });
@@ -322,6 +381,7 @@ function ClerkAuthProvider({ children }: { children: React.ReactNode }) {
         cancelVerification,
         logout,
         deleteAccount,
+        devLogin: DEV_LOGIN_ENABLED ? onDevLogin : undefined,
       }}
     >
       {children}

@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Platform, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font, radius, space, tabular, type Palette, type TextStyles } from '@/src/theme';
 
@@ -10,7 +10,16 @@ interface TextFieldProps extends TextInputProps {
   numeric?: boolean;
 }
 
-export function TextField({ label, error, numeric = false, style, ...inputProps }: TextFieldProps) {
+export function TextField({
+  label,
+  error,
+  numeric = false,
+  style,
+  onFocus,
+  onBlur,
+  ...inputProps
+}: TextFieldProps) {
+  const [focused, setFocused] = useState(false);
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
 
@@ -18,8 +27,22 @@ export function TextField({ label, error, numeric = false, style, ...inputProps 
     <View style={styles.container}>
       <Text style={t.label}>{label}</Text>
       <TextInput
-        style={[styles.input, numeric && styles.numeric, error && styles.inputError, style]}
+        style={[
+          styles.input,
+          numeric && styles.numeric,
+          focused && styles.inputFocused,
+          error && styles.inputError,
+          style,
+        ]}
         placeholderTextColor={colors.muted}
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          onBlur?.(e);
+        }}
         {...inputProps}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -47,6 +70,11 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     numeric: {
       fontFamily: font.mono,
       ...tabular,
+    },
+    inputFocused: {
+      borderColor: colors.indigo,
+      // Web draws its own focus outline on top; the indigo border is the indicator.
+      ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null),
     },
     inputError: {
       borderColor: colors.debit,

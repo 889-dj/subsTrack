@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { EmptyState } from '@/src/components/EmptyState';
 import { Icon } from '@/src/components/Icon';
 import { Logo } from '@/src/components/Logo';
@@ -23,7 +23,7 @@ import { useTabBarScroll } from '@/src/hooks/useTabBarScroll';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useSubscriptions } from '@/src/hooks/useSubscriptions';
 import { font, gutter, space, type Palette, type TextStyles } from '@/src/theme';
-import { groupByRenewalDate, type RenewalGroup } from '@/src/utils/subscriptions';
+import { daysUntil, groupByRenewalDate, type RenewalGroup } from '@/src/utils/subscriptions';
 import type { RenewalForecastPoint } from '@/src/utils/subscriptions';
 
 function greeting(): string {
@@ -82,6 +82,16 @@ export default function OverviewScreen() {
     });
   }, [trend, currency]);
 
+  // Charges landing in the next 7 days, in the headline currency only (mixed
+  // currencies can't be added without FX rates).
+  const due = useMemo(() => {
+    const soon = activeSubs.filter((sub) => {
+      const days = daysUntil(sub.nextRenewalDate);
+      return sub.currency === currency && days >= 0 && days <= 7;
+    });
+    return { amount: soon.reduce((sum, sub) => sum + sub.cost, 0), count: soon.length };
+  }, [activeSubs, currency]);
+
   const renewalGroups = useMemo(() => groupByRenewalDate(subs), [subs]);
   const upcomingGroups = useMemo(() => renewalGroups.slice(0, 5), [renewalGroups]);
 
@@ -124,6 +134,7 @@ export default function OverviewScreen() {
         <SkeletonList count={5} />
       ) : (
         <>
+          <Animated.View entering={FadeInDown.duration(320)}>
           <SpendingHero
             monthly={monthly}
             yearly={yearly}
@@ -131,7 +142,10 @@ export default function OverviewScreen() {
             activeCount={activeSubs.length}
             deltaPercent={monthChange}
             scopeNote={scopeNote}
+            dueAmount={due.amount}
+            dueCount={due.count}
           />
+          </Animated.View>
 
           {isError ? <Text style={styles.error}>Couldn't refresh — showing the last data.</Text> : null}
           {isOverviewError ? (
@@ -164,12 +178,13 @@ export default function OverviewScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.upcomingRow}
             >
-              {upcomingGroups.map((group) => (
-                <UpcomingPayment
+              {upcomingGroups.map((group, index) => (
+                <Animated.View
                   key={group.dateKey}
-                  subs={group.subs}
-                  onPress={() => setActiveGroup(group)}
-                />
+                  entering={FadeInRight.duration(280).delay(index * 40)}
+                >
+                  <UpcomingPayment subs={group.subs} onPress={() => setActiveGroup(group)} />
+                </Animated.View>
               ))}
             </ScrollView>
           ) : (

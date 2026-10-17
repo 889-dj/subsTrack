@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { TAB_BAR_CLEARANCE } from '@/src/components/BottomNav';
 import { CategoryBreakdown } from '@/src/components/CategoryBreakdown';
 import { EmptyState } from '@/src/components/EmptyState';
@@ -140,7 +140,7 @@ export default function InsightsScreen() {
         />
       ) : (
         <>
-          <View style={styles.heroCard}>
+          <Animated.View entering={FadeInDown.duration(320)} style={styles.heroCard}>
             <Text style={styles.heroKicker}>ANNUAL RUN RATE</Text>
             <View style={styles.heroAmountRow}>
               <Money value={yearly} currency={currency} size="total" />
@@ -153,10 +153,12 @@ export default function InsightsScreen() {
             {otherCurrenciesNote ? (
               <Text style={styles.heroScope}>{otherCurrenciesNote}.</Text>
             ) : null}
-          </View>
+          </Animated.View>
 
           <SectionHeader label="By category" />
-          <CategoryBreakdown entries={byCategory} currency={currency} periodLabel="MONTHLY TOTAL" />
+          <Animated.View entering={FadeInDown.duration(320).delay(80)}>
+            <CategoryBreakdown entries={byCategory} currency={currency} periodLabel="MONTHLY TOTAL" />
+          </Animated.View>
 
           <SectionHeader
             label="AI insights"
@@ -178,15 +180,22 @@ export default function InsightsScreen() {
             <Text style={t.caption}>No AI insights yet — add a few subscriptions first.</Text>
           ) : (
             aiInsights?.insights.map((body, index) => (
-              <InsightCard key={index} icon="chart" title="AI insight" body={body} accent="cyan" />
+              <Animated.View key={index} entering={FadeInDown.duration(280).delay(index * 60)}>
+                <InsightCard icon="chart" title="AI insight" body={body} accent="cyan" />
+              </Animated.View>
             ))
           )}
 
           {insights.length > 0 ? (
             <>
               <SectionHeader label="Smart insights" />
-              {insights.map((insight) => (
-                <InsightCard key={insight.title} {...insight} />
+              {insights.map((insight, index) => (
+                <Animated.View
+                  key={insight.title}
+                  entering={FadeInDown.duration(280).delay(index * 60)}
+                >
+                  <InsightCard {...insight} />
+                </Animated.View>
               ))}
             </>
           ) : null}

@@ -25,6 +25,8 @@ export interface Palette {
   shadow: string;
   /** Brand ink block used for the single primary data surface. */
   heroSurface: string;
+  /** Two-stop gradient painted over `heroSurface` on the hero card. */
+  heroGradient: readonly [string, string];
   heroInk: string;
   heroMuted: string;
   ink: string;
@@ -60,6 +62,7 @@ export const lightColors: Palette = {
   sheetHandle: '#D3D7E1',
   shadow: '#000000',
   heroSurface: '#18214A',
+  heroGradient: ['#243180', '#141B42'],
   heroInk: '#FFFFFF',
   heroMuted: '#B9C2EA',
   ink: '#171A24',
@@ -92,6 +95,7 @@ export const darkColors: Palette = {
   sheetHandle: 'rgba(255,255,255,0.18)',
   shadow: '#000000',
   heroSurface: '#5367F5',
+  heroGradient: ['#7A5CF6', '#4457E6'],
   heroInk: '#FFFFFF',
   heroMuted: '#DCE1FF',
   ink: '#F5F7FA', // text primary

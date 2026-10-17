@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { PieChart, type PieDatum } from 'panelui-native';
 import { AmountText } from '@/src/components/AmountText';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font, radius, space, type Palette, type TextStyles } from '@/src/theme';
@@ -12,7 +11,10 @@ interface CategoryBreakdownProps {
   periodLabel?: string;
 }
 
-/** Compact interactive category donut; the rows carry the precise values. */
+/**
+ * Category split as one segmented bar (length encodes share — NN/g advises bars
+ * over donuts for dashboards) with tappable rows that highlight their segment.
+ */
 export function CategoryBreakdown({ entries, currency, periodLabel = 'ANNUAL TOTAL' }: CategoryBreakdownProps) {
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
@@ -20,15 +22,6 @@ export function CategoryBreakdown({ entries, currency, periodLabel = 'ANNUAL TOT
   const periodWord = periodLabel.startsWith('MONTHLY') ? 'per month' : 'per year';
   const total = useMemo(() => entries.reduce((sum, entry) => sum + entry.amount, 0), [entries]);
   const accents = [colors.indigo, colors.cyan, colors.pink, colors.warning, colors.saved];
-  const data = useMemo<PieDatum[]>(
-    () =>
-      entries.map((entry, index) => ({
-        label: entry.category,
-        value: entry.amount,
-        color: accents[index % accents.length],
-      })),
-    [entries, accents],
-  );
   return (
     <View style={styles.card}>
       <View style={styles.totalRow}>
@@ -39,20 +32,21 @@ export function CategoryBreakdown({ entries, currency, periodLabel = 'ANNUAL TOT
         <AmountText value={total} currency={currency} size={22} />
       </View>
 
-      <View style={styles.chartRow}>
-        <PieChart
-          data={data}
-          size={142}
-          innerRadius={0.62}
-          padAngle={2}
-          minAngle={2}
-          animationDuration={560}
-          activeIndex={activeIndex}
-          onActiveIndexChange={setActiveIndex}
-          accessibilityLabel={`Subscription spending by category, ${periodWord}`}
-        >
-          <PieChart.Slices cornerRadius={4} popOut={5} dimOpacity={0.3} />
-        </PieChart>
+      <View
+        style={styles.bar}
+        accessibilityRole="image"
+        accessibilityLabel={`Subscription spending by category, ${periodWord}`}
+      >
+        {entries.map((entry, index) => (
+          <View
+            key={entry.category}
+            style={{
+              flex: Math.max(entry.amount, 0.0001),
+              backgroundColor: accents[index % accents.length],
+              opacity: activeIndex === -1 || activeIndex === index ? 1 : 0.3,
+            }}
+          />
+        ))}
       </View>
 
       <View style={styles.list} accessibilityRole="list">
@@ -106,11 +100,13 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       color: colors.muted,
     },
     totalHint: { ...t.caption, marginTop: 3 },
-    chartRow: {
-      minHeight: 154,
-      marginVertical: space.md,
-      alignItems: 'center',
-      justifyContent: 'center',
+    bar: {
+      flexDirection: 'row',
+      height: 14,
+      gap: 2,
+      marginVertical: space.lg,
+      borderRadius: 7,
+      overflow: 'hidden',
     },
     list: { gap: space.xs },
     row: {

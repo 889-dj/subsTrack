@@ -35,6 +35,7 @@ export default function LoginScreen() {
     verifyEmail,
     resendVerification,
     cancelVerification,
+    devLogin,
   } = useAuth();
   const router = useRouter();
   const { colors, text: t } = useTheme();
@@ -139,6 +140,22 @@ export default function LoginScreen() {
               onPress={verificationPending ? handleVerification : handleSubmit}
               loading={submitting}
             />
+            {__DEV__ && !verificationPending ? (
+              <Button
+                label="Dev login (mock data)"
+                variant="secondary"
+                onPress={async () => {
+                  setError(null);
+                  if (!devLogin) return;
+                  try {
+                    await devLogin();
+                  } catch (e: any) {
+                    setError(e?.message ?? 'Dev login failed.');
+                  }
+                }}
+                style={{ marginTop: space.md }}
+              />
+            ) : null}
           </View>
 
           {verificationPending ? (
