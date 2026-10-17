@@ -18,11 +18,16 @@
       "bundleIdentifier": "com.devjain.subsTrack",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/icon-dark.png",
+        "tinted": "./assets/icon-tinted.png"
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#F9F7FD",
+        "backgroundColor": "#4457E6",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
