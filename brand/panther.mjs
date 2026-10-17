@@ -37,6 +37,8 @@ w('brand/panther/adaptive-preview.svg', svg(scaled(0.7, head2(eyesOpen())), C.in
 const monoMask = `<mask id="m"><rect width="1024" height="1024" fill="#000"/><g fill="#fff">${mirror(`<path d="${HALF}"/>`)}</g><g fill="#000">${mirror('<path d="M298 534 Q392 468 486 574 Q382 618 298 534 Z"/>')}<path d="M476 672 H548 L512 716 Z"/></g></mask>`;
 w('brand/panther/mono.svg', svg(scaled(0.7, `${monoMask}<rect width="1024" height="1024" fill="#fff" mask="url(#m)"/>`)));
 w('brand/panther/mono-preview.svg', svg(scaled(0.7, `${monoMask}<rect width="1024" height="1024" fill="#fff" mask="url(#m)"/>`), '#6B6F80'));
+// Android notification small icon: pure white silhouette, transparent, fills the frame.
+w('brand/panther/notification-icon.svg', svg(`${monoMask}<rect width="1024" height="1024" fill="#fff" mask="url(#m)" transform="translate(512 512) scale(1.12) translate(-512 -540)"/>`));
 // Mascot poses: transparent background.
 w('brand/panther/pose-neutral.svg', svg(rim() + head2(eyesOpen())));
 w('brand/panther/pose-alert.svg', svg(rim() + head(C.ink) + eyesAlert() + nose()));

@@ -69,9 +69,12 @@ export async function registerForPushNotifications(): Promise<RegisterPushTokenO
     if (status !== 'granted') return { status: 'permission-denied' };
 
     if (Platform.OS === 'android') {
+      // Matches `defaultChannel` in the expo-notifications plugin config, so FCM
+      // messages that arrive before this runs still land on a real channel. HIGH
+      // makes renewal reminders pop as a banner instead of a silent tray entry.
       await mod.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: mod.AndroidImportance.DEFAULT,
+        name: 'Renewal reminders',
+        importance: mod.AndroidImportance.HIGH,
       });
     }
 
@@ -96,5 +99,61 @@ export async function registerForPushNotifications(): Promise<RegisterPushTokenO
     // call, not on require() — so `load()` alone can't catch a binary that
     // has the JS package but not the compiled native module linked in yet.
     return { status: 'unavailable' };
+  }
+}
+
+/**
+ * By default the OS hides a notification that arrives while the app is open.
+ * Reminders are the point of this feature, so show them as a banner anyway
+ * (no sound or badge: the user is already looking at the app). No-op when the
+ * native module is missing from this binary.
+ */
+export function configureForegroundNotifications(): void {
+  const mod = load();
+  if (!mod) return;
+  try {
+    mod.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  } catch {
+    // Native module linked in JS but not in this binary; nothing to configure.
+  }
+}
+
+/**
+ * Calls `onTap` with a notification's `data` payload when the user taps it,
+ * including the tap that cold-started the app (the OS hands that one over only
+ * once the app is up, so it is read from the "last response" slot, then cleared
+ * so it is never handled twice). Returns an unsubscribe function.
+ */
+export function subscribeToNotificationTaps(
+  onTap: (data: Record<string, unknown>) => void,
+): () => void {
+  const mod = load();
+  if (!mod) return () => {};
+
+  const handle = (response: import('expo-notifications').NotificationResponse | null | undefined) => {
+    const data = response?.notification.request.content.data;
+    if (data) onTap(data);
+  };
+
+  try {
+    mod
+      .getLastNotificationResponseAsync()
+      .then((response) => {
+        if (!response) return;
+        handle(response);
+        return mod.clearLastNotificationResponseAsync();
+      })
+      .catch(() => {});
+    const subscription = mod.addNotificationResponseReceivedListener(handle);
+    return () => subscription.remove();
+  } catch {
+    return () => {};
   }
 }
