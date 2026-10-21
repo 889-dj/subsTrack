@@ -14,9 +14,11 @@ import {
 import { useRouter } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { TextField } from '@/src/components/TextField';
+import { Icon } from '@/src/components/Icon';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useTheme } from '@/src/hooks/useTheme';
 import { font, gutter, space, type Palette, type TextStyles } from '@/src/theme';
+import { PASSWORD_RULES, passwordProblem } from '@/src/utils/password';
 
 type Mode = 'login' | 'register';
 
@@ -48,6 +50,13 @@ export default function LoginScreen() {
     if (!email.trim() || !password) {
       setError('Fill in both email and password.');
       return;
+    }
+    if (isRegister) {
+      const problem = passwordProblem(password);
+      if (problem) {
+        setError(problem);
+        return;
+      }
     }
     setSubmitting(true);
     try {
@@ -81,9 +90,14 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          automaticallyAdjustKeyboardInsets
+        >
           <Text style={styles.wordmark}>SUBSTRACK</Text>
           <Text style={styles.title}>
             {verificationPending
@@ -126,10 +140,31 @@ export default function LoginScreen() {
                 <TextField
                   label="Password"
                   secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType={isRegister ? 'newPassword' : 'password'}
+                  autoComplete={isRegister ? 'new-password' : 'current-password'}
                   value={password}
                   onChangeText={setPassword}
                   placeholder="••••••••"
                 />
+                {isRegister ? (
+                  <View style={styles.rules}>
+                    {PASSWORD_RULES.map((rule) => {
+                      const met = rule.test(password);
+                      return (
+                        <View key={rule.id} style={styles.ruleRow}>
+                          <Icon
+                            name={met ? 'checkmark-circle' : 'close'}
+                            size={14}
+                            color={met ? colors.saved : colors.faint}
+                          />
+                          <Text style={[styles.ruleText, met && { color: colors.saved }]}>{rule.label}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : null}
               </>
             )}
 
@@ -244,6 +279,19 @@ const createStyles = (colors: Palette, t: TextStyles) =>
     form: {
       marginBottom: space.lg,
       gap: 0,
+    },
+    rules: {
+      gap: space.xs,
+      marginTop: -space.sm,
+      marginBottom: space.lg,
+    },
+    ruleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+    },
+    ruleText: {
+      ...t.caption,
     },
     error: {
       ...t.caption,

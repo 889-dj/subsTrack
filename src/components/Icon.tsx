@@ -27,6 +27,8 @@ import {
   Sun03Icon,
   Tick02Icon,
   UserCircleIcon,
+  ViewIcon,
+  ViewOffSlashIcon,
   Wallet01Icon,
 } from '@hugeicons/core-free-icons';
 
@@ -68,6 +70,8 @@ const ICONS = {
   sun: Sun03Icon,
   moon: Moon02Icon,
   system: ComputerIcon,
+  eye: ViewIcon,
+  'eye-off': ViewOffSlashIcon,
 } as const;
 
 export type IconName = keyof typeof ICONS;
