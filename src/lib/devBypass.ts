@@ -7,8 +7,12 @@
  */
 export const DEV_LOGIN_ENABLED = __DEV__;
 
-/** Mock API is on from boot when EXPO_PUBLIC_USE_MOCK_API is not "false". */
-export const USE_MOCK_API = process.env.EXPO_PUBLIC_USE_MOCK_API !== 'false';
+/**
+ * Mock API is opt-in and dev-only: it needs a dev build (`__DEV__`) AND
+ * EXPO_PUBLIC_USE_MOCK_API="true". Release builds can never run the mock, even
+ * if the variable is missing or set to "true" by mistake.
+ */
+export const USE_MOCK_API = __DEV__ && process.env.EXPO_PUBLIC_USE_MOCK_API === 'true';
 
 /** Throwaway credentials for the in-memory mock only. */
 export const DEV_USER = { email: 'dev@substrack.test', password: 'dev-only-mock' };
