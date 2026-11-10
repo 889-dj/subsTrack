@@ -30,8 +30,8 @@ webhooks, and durable account deletion. The full contract is in
 `docs/backend-prd.md`; its OpenAPI file is in the backend repository.
 
 `setupMockApi()` is still called from `app/_layout.tsx`, but the mock adapter only
-activates when `EXPO_PUBLIC_USE_MOCK_API` is not `false`. This keeps UI development
-available without intercepting production requests.
+activates only in dev builds (`__DEV__`) when `EXPO_PUBLIC_USE_MOCK_API=true`. Release
+builds can never use the mock, so production requests are never intercepted.
 
 The mock deliberately mirrors the REST contract a real backend would expose, so
 switching over is configuration only:
