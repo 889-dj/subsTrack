@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { LineChart } from 'panelui-native';
+import { Sparkline } from '@/src/components/Sparkline';
 import { Money } from '@/src/components/Money';
 import { formatCompactMoney } from '@/src/utils/money';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -78,11 +78,8 @@ export function SpendingHero({
       </Text>
 
       {trend && trend.length > 1 ? (
-        <View style={styles.spark} aria-hidden>
-          <LineChart data={trend} compact aspectRatio={6}>
-            <LineChart.Area dataKey="amount" color={colors.heroInk} />
-            <LineChart.Line dataKey="amount" color={colors.heroInk} strokeWidth={2} />
-          </LineChart>
+        <View style={styles.spark}>
+          <Sparkline values={trend.map((point) => point.amount)} color={colors.heroInk} height={40} />
         </View>
       ) : null}
 
@@ -159,7 +156,7 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       lineHeight: 18,
       color: colors.heroMuted,
     },
-    spark: { marginTop: space.lg, height: 44, opacity: 0.9 },
+    spark: { marginTop: space.md, opacity: 0.9 },
     duePanel: {
       flexDirection: 'row',
       alignItems: 'center',

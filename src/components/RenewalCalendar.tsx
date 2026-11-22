@@ -143,12 +143,17 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       width: 36,
       height: 36,
       borderRadius: radius.cardSm,
+      // Fill, border and clip are all declared up front: Android drops the
+      // corner radius when a background is only added later (on selection).
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: 'transparent',
+      overflow: 'hidden',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 2,
     },
     dayBoxToday: {
-      borderWidth: 1,
       borderColor: colors.indigo,
     },
     dayBoxSelected: {

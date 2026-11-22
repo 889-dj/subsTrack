@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { BarChart, Menu, type BarChartDatum } from 'panelui-native';
+import { Menu } from 'panelui-native';
+import { ForecastBars, type ForecastColumn } from '@/src/components/ForecastBars';
 import { AmountText } from '@/src/components/AmountText';
 import { Icon } from '@/src/components/Icon';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -19,10 +20,13 @@ interface SpendingTrendChartProps {
   onMonthsChange: (months: ForecastRange) => void;
 }
 
-type ForecastDatum = RenewalForecastPoint & BarChartDatum;
-
 /** Categories drawn individually; everything smaller is folded into "Other". */
 const MAX_SERIES = 4;
+
+/** "Nov 2026" / "November" → "Nov", so every column label fits without truncation. */
+function monthShort(label: string): string {
+  return label.trim().split(/[\s']/)[0].slice(0, 3);
+}
 
 const RANGE_OPTIONS: { value: ForecastRange; label: string }[] = [
   { value: 3, label: 'Next 3 months' },
@@ -39,7 +43,7 @@ export function SpendingTrendChart({
 }: SpendingTrendChartProps) {
   const { colors, text: t } = useTheme();
   const styles = useMemo(() => createStyles(colors, t), [colors, t]);
-  const [active, setActive] = useState<ForecastDatum | null>(null);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   // Which categories get their own colour: the biggest across the visible months.
   const accents = [colors.indigo, colors.cyan, colors.pink, colors.warning, colors.saved];
@@ -56,20 +60,21 @@ export function SpendingTrendChart({
     return hasRest ? [...named, 'Other'] : named;
   }, [points]);
 
-  // One column per series so the chart can stack them; the folded categories sum into "Other".
-  const data = useMemo(
+  // One stacked column per month; categories folded into "Other" sum into its slot.
+  const columns = useMemo<ForecastColumn[]>(
     () =>
       points.map((point) => {
-        const row: Record<string, number | string | unknown> = { ...point };
-        for (const name of series) row[name] = 0;
+        const values = series.map(() => 0);
         for (const item of point.byCategory) {
-          const key = series.includes(item.category) ? item.category : 'Other';
-          row[key] = Number(row[key]) + item.amount;
+          const slot = series.indexOf(item.category);
+          values[slot === -1 ? series.indexOf('Other') : slot] += item.amount;
         }
-        return row;
-      }) as ForecastDatum[],
+        return { label: monthShort(point.label), values };
+      }),
     [points, series],
   );
+  const data = points;
+  const active = activeIndex === null ? null : (points[activeIndex] ?? null);
   const periodTotal = data.reduce((sum, point) => sum + point.amount, 0);
   const renewalCount = data.reduce((sum, point) => sum + point.count, 0);
   const selectedRange = RANGE_OPTIONS.find((option) => option.value === months) ?? RANGE_OPTIONS[1];
@@ -106,7 +111,7 @@ export function SpendingTrendChart({
             <Menu.RadioGroup
               value={String(months)}
               onValueChange={(value) => {
-                setActive(null);
+                setActiveIndex(null);
                 onMonthsChange(Number(value) as ForecastRange);
               }}
             >
@@ -136,37 +141,19 @@ export function SpendingTrendChart({
         />
       </View>
 
-      <BarChart
-        data={data}
-        xDataKey="label"
-        stacked
-        aspectRatio={1.72}
-        barGap={months === 12 ? 0.32 : 0.42}
-        animationDuration={520}
-        fadedOpacity={0.28}
-        onActiveIndexChange={(_index, datum) => setActive(datum as ForecastDatum | null)}
+      <View
+        accessible
         accessibilityLabel={`Renewal forecast for the next ${months} months`}
-        accessibilityHint="Swipe through the chart to hear each month's projected charges."
-        accessibilityLabelForDatum={(datum) =>
-          `${datum.label}, ${formatMoney(Number(datum.amount), currency)}, ${datum.count} renewals`
-        }
+        accessibilityHint={points.map((p) => `${p.label}, ${formatMoney(p.amount, currency)}, ${p.count} renewals`).join('. ')}
       >
-        <BarChart.Grid rows={3} color={colors.hairline} dashArray="3,6" />
-        {series.map((name, index) => (
-          <BarChart.Bar
-            key={name}
-            dataKey={name}
-            color={accents[index % accents.length]}
-            cornerRadius={index === series.length - 1 ? 6 : 2}
-          />
-        ))}
-        <BarChart.XAxis ticks={months > 6 ? 6 : months} />
-        <BarChart.YAxis ticks={3} format={formatAxis} />
-        <BarChart.Tooltip
-          formatX={(datum) => String(datum.label)}
-          formatValue={(value) => formatMoney(value, currency)}
+        <ForecastBars
+          columns={columns}
+          colors={series.map((_, index) => accents[index % accents.length])}
+          selectedIndex={activeIndex}
+          onSelect={setActiveIndex}
+          formatAxis={formatAxis}
         />
-      </BarChart>
+      </View>
 
       <View style={styles.legend}>
         {series.map((name, index) => (
@@ -179,7 +166,7 @@ export function SpendingTrendChart({
         ))}
       </View>
 
-      <Text style={styles.footnote}>Drag across the bars to inspect a month.</Text>
+      <Text style={styles.footnote}>Tap or drag across the bars to inspect a month.</Text>
     </View>
   );
 }

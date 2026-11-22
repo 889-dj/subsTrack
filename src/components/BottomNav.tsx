@@ -144,6 +144,8 @@ const createStyles = (colors: Palette) =>
       width: 34,
       height: 32,
       borderRadius: 11,
+      backgroundColor: 'transparent',
+      overflow: 'hidden',
       alignItems: 'center',
       justifyContent: 'center',
     },
