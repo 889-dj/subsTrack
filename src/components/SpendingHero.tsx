@@ -54,7 +54,7 @@ export function SpendingHero({
         colors={colors.heroGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
+        style={[StyleSheet.absoluteFill, styles.gradient]}
       />
       <View style={[styles.orb, styles.orbTop]} pointerEvents="none" />
       <View style={[styles.orb, styles.orbBottom]} pointerEvents="none" />
@@ -111,6 +111,9 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       padding: space.xl,
       overflow: 'hidden',
     },
+    // Android clips `overflow: hidden` children without anti-aliasing, so the
+    // gradient carries the corner radius itself instead of leaning on the clip.
+    gradient: { borderRadius: radius.card + 6 },
     orb: {
       position: 'absolute',
       borderRadius: 999,

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
@@ -86,7 +86,7 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
 
   return (
     <View style={[styles.wrapper, { bottom: insets.bottom + space.md }]}>
-      <Animated.View style={[styles.bar, barAnimatedStyle]}>
+      <Animated.View renderToHardwareTextureAndroid style={[styles.bar, barAnimatedStyle]}>
         {leftRoutes.map(renderTab)}
 
         <Pressable
@@ -120,13 +120,17 @@ const createStyles = (colors: Palette) =>
       alignItems: 'center',
       height: TAB_BAR_HEIGHT,
       borderRadius: radius.card,
-      backgroundColor: colors.isDark ? 'rgba(18,21,27,0.94)' : colors.surface,
+      // Android draws its elevation shadow straight through a translucent
+      // fill, so the pill is opaque there and gets a soft lift in place of
+      // iOS's blur-free hairline-only look.
+      backgroundColor:
+        colors.isDark && Platform.OS !== 'android' ? 'rgba(18,21,27,0.94)' : colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
       paddingHorizontal: 6,
       gap: 1,
       shadowOpacity: 0,
-      elevation: 0,
+      elevation: Platform.OS === 'android' ? 6 : 0,
     },
     item: {
       flex: 1,

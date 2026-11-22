@@ -32,7 +32,7 @@ export function PressableScale({
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View renderToHardwareTextureAndroid style={animatedStyle}>
       <Pressable
         {...rest}
         onPressIn={(e) => {
