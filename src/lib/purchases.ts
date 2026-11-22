@@ -64,7 +64,12 @@ function apiKey(): string | undefined {
     android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY,
     default: undefined,
   });
-  return key?.trim() || undefined;
+  const trimmed = key?.trim();
+  // RevenueCat's Test Store keys (`test_…`) make the SDK show "Wrong API Key"
+  // and close the app in a release build. Treat one as missing so a build made
+  // with the wrong key degrades to "purchases unavailable" instead of crashing.
+  if (!__DEV__ && trimmed?.startsWith('test_')) return undefined;
+  return trimmed || undefined;
 }
 
 let configured = false;
