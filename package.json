@@ -4,7 +4,7 @@
   "packageManager": "npm@11.12.1",
   "main": "expo-router/entry",
   "dependencies": {
-    "@clerk/expo": "^4.5.3",
+    "@clerk/expo": "^4.17.6",
     "@expo-google-fonts/geist": "^0.4.2",
     "@expo-google-fonts/geist-mono": "^0.4.3",
     "@expo/vector-icons": "^15.0.2",
