@@ -1,8 +1,7 @@
 /**
  * expo-image-picker ships native code, so requiring it throws on a dev-client
- * binary built before the package was added — same situation as
- * react-native-purchases (see src/lib/purchases.ts), same fix: load lazily,
- * behind a try/catch, so a stale binary degrades to a message on the specific
+ * binary built before the package was added, so load it lazily, behind a
+ * try/catch, so a stale binary degrades to a message on the specific
  * action that needs it instead of crashing Metro's whole module graph on
  * import (which is what happens if this is imported eagerly at module scope).
  */

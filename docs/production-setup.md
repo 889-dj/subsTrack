@@ -57,28 +57,13 @@ EXPO_PUBLIC_API_URL=https://<your-api-domain>/v1
 
 The `/v1` suffix is required.
 
-## 3. RevenueCat
+## 3. Build and smoke test
 
-Follow `docs/revenuecat.md`. In addition to the two public platform keys used by
-the app, the backend needs `REVENUECAT_WEBHOOK_SECRET` and
-`REVENUECAT_SECRET_API_KEY`. Point the RevenueCat webhook to:
-
-```text
-https://<your-api-domain>/api/webhooks/revenuecat
-```
-
-## 4. Build and smoke test
-
-Clerk configuration and RevenueCat are native-build concerns. Create a fresh
+Clerk configuration is a native-build concern. Create a fresh
 development build after setting EAS environment values, then test this sequence:
 
 1. Create an account and verify its email.
 2. Create, edit, and delete a subscription.
 3. Confirm overview, calendar, and insights totals do not mix currencies.
-4. Purchase and restore Pro with store sandbox accounts.
-5. Delete the account, then confirm its subscriptions and external identities
+4. Delete the account, then confirm its subscriptions and external identities
    are removed.
-
-Do not ship until the final Free/Pro limits match the paywall copy. Renewal
-reminders, price alerts, and exports must either exist or be removed from the
-purchase promise.

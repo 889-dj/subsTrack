@@ -25,8 +25,8 @@ most training data describes.
 
 The production backend lives beside this repository at `../subsTrack-backend`.
 It is a Fastify/TypeScript/PostgreSQL service with Clerk authentication,
-subscription CRUD, per-currency analytics, RevenueCat entitlement projection,
-webhooks, and durable account deletion. The full contract is in
+subscription CRUD, per-currency analytics, RevenueCat entitlement projection
+(unused by the app for now), webhooks, and durable account deletion. The full contract is in
 `docs/backend-prd.md`; its OpenAPI file is in the backend repository.
 
 `setupMockApi()` is still called from `app/_layout.tsx`, but the mock adapter only
@@ -68,16 +68,15 @@ only to support offline UI development.
 
 ```
 app/                      expo-router file routes only — thin screens
-  _layout.tsx             providers: SafeArea → QueryClient → Auth → Purchases
+  _layout.tsx             providers: SafeArea → QueryClient → Auth
   (auth)/login.tsx        signed-out
   (app)/                  signed-in; redirects to (auth) without a token
     (tabs)/               overview · calendar · add · subscriptions · insights
     add.tsx  [id].tsx     create / detail-edit
-    account.tsx           identity, appearance, plan and deletion controls
-    paywall.tsx           RevenueCat plans
+    account.tsx           identity, appearance and deletion controls
 src/
   api/                    typed axios clients + mock adapter + token provider
-  hooks/                  Clerk/mock auth, purchases, subscriptions, theme
+  hooks/                  Clerk/mock auth, subscriptions, theme
   components/             shared UI
   types.ts                all shared types live here
   theme.ts                colors / spacing / radius / typography / shadow
@@ -99,21 +98,13 @@ src/
 
 ## Monetization
 
-RevenueCat via `react-native-purchases`. Entitlement id is `pro`
-(`src/lib/purchases.ts`). Setup notes are in `docs/revenuecat.md`; public SDK keys
-come from `.env` (see `.env.example`) — the secret key must never reach the bundle.
-
-`usePurchases()` handles identity carefully: it ties purchases to the signed-in
-user id, skips the `'restored'` placeholder id (otherwise every restored session
-would share one entitlement), and calls `forgetUser()` on sign-out.
-
-> **The paywall gates nothing yet.** Purchase, restore and entitlement
-> reads all work, but `isPro` is only used for *display* — the plan card in
-> `account.tsx` and the "you're subscribed" state in `paywall.tsx`. No feature is
-> locked. Deciding the exact Free/Pro policy and ensuring every paywall promise
-> exists is still a product decision and a blocker for store release.
-
-Purchases require a **development build** — they do not work in Expo Go.
+**There is no paid plan in the app yet.** RevenueCat (`react-native-purchases`), the
+paywall screen and the Free/Pro plan card were removed to ship without store
+billing costs. The backend still has its RevenueCat webhook and entitlement
+projection (`/me` returns `isPro`), but nothing in the app reads it. Re-adding
+billing means restoring those pieces from git history (see the "Remove RevenueCat"
+commit), adding a Play/App Store app in RevenueCat for a real `goog_`/`appl_` key,
+and deciding what Pro unlocks. Never ship a `test_` RevenueCat key in a release build.
 
 ---
 
@@ -121,13 +112,13 @@ Purchases require a **development build** — they do not work in Expo Go.
 
 **Built:** Clerk-backed email auth with verification, mock auth mode, subscription
 CRUD, categories, calendar-safe monthly/yearly math, per-currency forecasts,
-overview/insights, paywall, custom floating tab bar, backend webhooks, and durable
+overview/insights, custom floating tab bar, backend webhooks, and durable
 account deletion.
 
 **Not built / undecided, in rough priority order for shipping:**
 
-1. What Pro unlocks, enforcing it, and removing any unimplemented paywall claims.
-2. Production Clerk, RevenueCat, database, webhook, and API deployment values.
+1. Production Clerk, database, webhook, and API deployment values.
+2. (Later) A paid plan: what Pro unlocks, RevenueCat set-up, and the paywall.
 3. Store listing assets, privacy policy, and accurate data-handling disclosures.
 4. Password reset UX.
 5. The mobile app has type checking but no UI test suite or linter yet. The
@@ -141,7 +132,7 @@ account deletion.
 npm start                 dev server
 npm run android|ios|web   run on a platform
 npm run typecheck         TypeScript validation
-npm run build:dev         EAS development build (needed for RevenueCat)
+npm run build:dev         EAS development build
 npm run build:prod        production build
 npm run submit:android|ios
 ```

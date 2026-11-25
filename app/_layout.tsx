@@ -13,7 +13,6 @@ import { PanelUIProvider } from 'panelui-native';
 import { setupMockApi } from '@/src/api/mock';
 import { AuthProvider } from '@/src/hooks/useAuth';
 import { usePushNotifications } from '@/src/hooks/usePushNotifications';
-import { PurchasesProvider } from '@/src/hooks/usePurchases';
 import { ThemeProvider, useTheme } from '@/src/hooks/useTheme';
 import { palettes } from '@/src/theme';
 
@@ -52,9 +51,7 @@ export default function RootLayout() {
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
-              <PurchasesProvider>
-                <AppShell />
-              </PurchasesProvider>
+              <AppShell />
             </AuthProvider>
           </QueryClientProvider>
         </ThemeProvider>

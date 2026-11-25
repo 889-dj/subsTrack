@@ -1,8 +1,7 @@
 /**
  * expo-notifications ships native code, so requiring it throws on a
  * dev-client binary built before the package was added — same situation as
- * expo-image-picker (see src/lib/imagePicker.ts) and react-native-purchases
- * (see src/lib/purchases.ts). The usual fix (try/catch around require()) is
+ * expo-image-picker (see src/lib/imagePicker.ts). The usual fix (try/catch around require()) is
  * NOT enough here: expo-notifications' own sub-modules call the *throwing*
  * expo-modules-core `requireNativeModule('ExpoPushTokenManager')` at their
  * top level, and on this binary that throw happens in a way a plain JS

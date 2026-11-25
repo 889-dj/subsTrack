@@ -37,7 +37,7 @@ function TabsInner({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }
         lazy: false,
         // Freeze (pause React updates on) a tab the moment it isn't focused —
         // this fires both when swiping to another tab and when a Stack screen
-        // like Settings/paywall/detail is pushed on top of the whole tab
+        // like Settings/detail is pushed on top of the whole tab
         // navigator. Without it, every mounted-but-hidden tab (four gradient-
         // and chart-heavy screens) fully re-renders on any theme change, which
         // is what made toggling Appearance from Settings feel slow. Freezing

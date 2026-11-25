@@ -3,14 +3,12 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AmountText } from '@/src/components/AmountText';
 import { Icon, type IconName } from '@/src/components/Icon';
@@ -24,7 +22,6 @@ import {
   useUnregisterPushToken,
   useUploadAvatar,
 } from '@/src/hooks/useMe';
-import { usePurchases } from '@/src/hooks/usePurchases';
 import { useTheme, type ThemeModePreference } from '@/src/hooks/useTheme';
 import { pickImage } from '@/src/lib/imagePicker';
 import { registerForPushNotifications } from '@/src/lib/notifications';
@@ -42,9 +39,7 @@ const APPEARANCE_OPTIONS: {
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { user, logout, deleteAccount } = useAuth();
-  const { isPro, managementUrl } = usePurchases();
   const { data: overview } = useOverview();
   const { data: me } = useMe();
   const uploadAvatarMutation = useUploadAvatar();
@@ -187,11 +182,6 @@ export default function AccountScreen() {
     );
   }
 
-  function handlePlanPress() {
-    if (isPro && managementUrl) Linking.openURL(managementUrl);
-    else router.push('/paywall');
-  }
-
   return (
     <ScrollView
       style={styles.screen}
@@ -203,17 +193,11 @@ export default function AccountScreen() {
     >
       <ScreenHeader
         title="Account"
-        caption="Plan, appearance, and account controls."
+        caption="Appearance and account controls."
         dismiss="back"
       />
 
-      <Pressable
-        onPress={handlePlanPress}
-        accessibilityRole="button"
-        accessibilityLabel={isPro ? 'Manage SubsTrack Pro' : 'Explore SubsTrack Pro'}
-        accessibilityHint={isPro ? 'Opens subscription management' : 'Opens available Pro plans'}
-        style={({ pressed }) => [styles.pass, pressed && styles.pressed]}
-      >
+      <View style={styles.pass}>
         <View style={styles.identityRow}>
           <Pressable
             onPress={handleChangePhoto}
@@ -246,10 +230,6 @@ export default function AccountScreen() {
               {stats.total} active {stats.total === 1 ? 'subscription' : 'subscriptions'}
             </Text>
           </View>
-
-          <View style={styles.planBadge}>
-            <Text style={styles.planBadgeText}>{isPro ? 'PRO' : 'FREE'}</Text>
-          </View>
         </View>
 
         <View style={styles.passRule} />
@@ -281,17 +261,7 @@ export default function AccountScreen() {
         {otherCurrenciesNote ? (
           <Text style={styles.passScope}>{currency} totals · {otherCurrenciesNote}</Text>
         ) : null}
-
-        <View style={styles.planAction}>
-          <Icon
-            name={isPro ? 'checkmark-circle' : 'flash'}
-            size={16}
-            color={colors.heroInk}
-          />
-          <Text style={styles.planActionText}>{isPro ? 'Manage plan' : 'Explore Pro'}</Text>
-          <Icon name="chevron-forward" size={16} color={colors.heroInk} />
-        </View>
-      </Pressable>
+      </View>
 
       <Text style={styles.sectionTitle}>Appearance</Text>
       <View style={styles.appearanceControl} accessibilityRole="radiogroup">
@@ -463,21 +433,6 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       ...t.caption,
       color: colors.heroMuted,
     },
-    planBadge: {
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: radius.chip,
-      backgroundColor: 'rgba(255,255,255,0.13)',
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.2)',
-    },
-    planBadgeText: {
-      fontFamily: font.monoMed,
-      fontSize: 10,
-      lineHeight: 13,
-      letterSpacing: 1,
-      color: colors.heroInk,
-    },
     passRule: {
       height: 1,
       backgroundColor: 'rgba(255,255,255,0.16)',
@@ -511,22 +466,6 @@ const createStyles = (colors: Palette, t: TextStyles) =>
       fontSize: 11,
       lineHeight: 15,
       color: colors.heroMuted,
-    },
-    planAction: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: space.sm,
-      minHeight: 42,
-      marginTop: space.lg,
-      paddingHorizontal: space.md,
-      borderRadius: radius.cardSm,
-      backgroundColor: 'rgba(255,255,255,0.12)',
-    },
-    planActionText: {
-      flex: 1,
-      fontFamily: font.sansMed,
-      fontSize: 14,
-      color: colors.heroInk,
     },
     sectionTitle: {
       ...t.section,
