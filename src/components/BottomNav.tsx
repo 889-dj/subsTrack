@@ -36,7 +36,7 @@ const LABELS: Record<string, string> = {
  * is actively being scrolled (down), and springs back on scroll-up or at
  * rest, echoing the Revolut-style shrinking dock.
  */
-export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps) {
+export function BottomNav({ state, descriptors, emitter, navigateToTab }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors } = useTheme();
@@ -60,9 +60,9 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
     const label = LABELS[route.name] ?? options.title ?? route.name;
 
     function onPress() {
-      const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+      const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
       if (!focused && !event.defaultPrevented) {
-        navigation.navigate(route.name, route.params);
+        navigateToTab(route.key);
       }
     }
 

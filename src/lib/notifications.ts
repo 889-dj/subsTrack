@@ -7,13 +7,13 @@
  * top level, and on this binary that throw happens in a way a plain JS
  * try/catch around `require('expo-notifications')` does not catch (it still
  * crashes the app under React Native's New Architecture). The real fix:
- * probe with expo-modules-core's own *non-throwing* `requireOptionalNativeModule`
+ * probe with expo's own *non-throwing* `requireOptionalNativeModule`
  * for that exact native module first, and never call require('expo-notifications')
  * at all — not even inside a try/catch — unless that probe succeeds.
  */
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { requireOptionalNativeModule } from 'expo-modules-core';
+import { requireOptionalNativeModule } from 'expo';
 
 type NotificationsNamespace = typeof import('expo-notifications');
 
